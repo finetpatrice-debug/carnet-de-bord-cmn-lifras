@@ -15,6 +15,7 @@ describe('Formulaire Mobile Terrain (PWA Offline-First) — Validation & Grille 
       GESTION_DEBAT: 8,
       ORGA_MER: 9,
       ORGA_CARRIERE: 12,
+      DIRECTEUR_PLONGEE: 8,
       STAGE_FINAL: 27,
     };
 
@@ -27,7 +28,7 @@ describe('Formulaire Mobile Terrain (PWA Offline-First) — Validation & Grille 
       sumAll += activeForExam.length;
     }
 
-    expect(sumAll).toBe(99);
+    expect(sumAll).toBe(107);
   });
 
   it('2. Calcule en temps réel la moyenne Iso-Excel lors de la saisie tactile avec prise en compte de NE', () => {

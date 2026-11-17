@@ -174,6 +174,7 @@ export function buildEvaluatorCrossMatrix(
     GESTION_DEBAT: 0,
     ORGA_MER: 0,
     ORGA_CARRIERE: 0,
+    DIRECTEUR_PLONGEE: 0,
     STAGE_FINAL: 0,
   });
 

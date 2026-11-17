@@ -19,14 +19,13 @@ export function App(): React.ReactElement {
           <Route path="/connexion" element={<LoginPage />} />
 
           <Route element={<ProtectedLayout />}>
-            {/* Accessible aux 4 rôles réglementaires */}
+            {/* Accessible aux 3 rôles réglementaires */}
             <Route
               element={
                 <RoleProtectedRoute
                   allowedRoles={[
                     'ADMIN_DTF',
                     'MN_EVALUATOR',
-                    'PARRAIN_MN',
                     'CMN_CANDIDATE',
                   ]}
                 />

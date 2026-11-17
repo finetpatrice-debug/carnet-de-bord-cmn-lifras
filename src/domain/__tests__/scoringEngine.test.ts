@@ -92,6 +92,10 @@ const GOLDEN_DATASET_DISTRIBUTIONS: Record<ExamCode, DirectExamDistributionsInpu
       CONNAISSANCES: { TB: 2 },
     },
   },
+  DIRECTEUR_PLONGEE: {
+    evaluationCount: 0,
+    pillars: {},
+  },
   STAGE_FINAL: {
     evaluationCount: 0,
     pillars: {},
@@ -106,6 +110,7 @@ describe('Moteur Mathématique « Iso-Excel » (scoringEngine.ts)', () => {
       S: 6,
       I: 4,
       M: 2,
+      '1': 1,
     });
 
     // Cellule avec uniquement des NE : J = 0, K = 0, L = 0 (aucune division par zéro)

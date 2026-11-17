@@ -15,12 +15,12 @@ function escapeHtml(value: string | number | null | undefined): string {
 export type PdfReportAudience =
   | 'COLLEGE_NATIONAL'
   | 'CANDIDAT_CMN'
-  | 'PARRAIN_MN';
+  | 'MN_EVALUATOR';
 
 export const PDF_AUDIENCE_LABELS: Record<PdfReportAudience, string> = {
-  COLLEGE_NATIONAL: 'Dossier Complet — Collège National & DTF',
-  PARRAIN_MN: 'Bilan d’Accompagnement — Parrain & Moniteurs MN',
-  CANDIDAT_CMN: 'Bilan Pédagogique Individuel — Candidat CMN',
+  COLLEGE_NATIONAL: 'Dossier Complet — Jury & Commission d’Enseignement',
+  MN_EVALUATOR: 'Bilan d’Évaluation — Moniteurs Nationaux (MN)',
+  CANDIDAT_CMN: 'Bilan Pédagogique Individuel — Candidat Moniteur National (CMN)',
 };
 
 export interface OfficialDeliberationReportPayload {
@@ -260,9 +260,9 @@ export function buildOfficialPdfReportHtml(
   </table>
 
   <div class="signatures">
-    <div class="sig-box"><strong>Le Candidat Moniteur National</strong><br/>${escapeHtml(candidate.first_name)} ${escapeHtml(candidate.last_name)}</div>
-    <div class="sig-box"><strong>Le Parrain Moniteur National</strong><br/>Visa & Date</div>
-    <div class="sig-box"><strong>Pour le Collège National / DTF LIFRAS</strong><br/>Délibération & Signature</div>
+    <div class="sig-box"><strong>Le Candidat Moniteur National (CMN)</strong><br/>${escapeHtml(candidate.first_name)} ${escapeHtml(candidate.last_name)}</div>
+    <div class="sig-box"><strong>Le Moniteur National (MN) Évaluateur</strong><br/>Visa & Date</div>
+    <div class="sig-box"><strong>Pour le Jury / Commission de l'Enseignement LIFRAS</strong><br/>Délibération & Signature</div>
   </div>
 </body>
 </html>`;

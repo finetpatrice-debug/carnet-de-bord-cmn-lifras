@@ -23,12 +23,15 @@ import {
   OFFICIAL_PILLARS,
 } from '@/domain/referentials';
 import { computeCandidateScoreboard } from '@/domain/scoringEngine';
-import type {
-  GradeCode,
-  PillarCode,
-  Profile,
+import {
+  GRADE_LABELS,
+  GRADE_POINTS,
+  USER_ROLE_LABELS,
+  type ExamCode,
+  type GradeCode,
+  type PillarCode,
+  type Profile,
 } from '@/domain/types';
-import { USER_ROLE_LABELS } from '@/domain/types';
 import {
   buildEvaluatorCrossMatrix,
   buildPillarChronologicalSeries,
@@ -67,6 +70,7 @@ import {
 type DashboardTab =
   | 'OVERVIEW_AND_PILLARS'
   | 'EXAMS_AND_JURIES'
+  | 'ITEMS_TIMELINE'
   | 'COMMENTS_JOURNAL'
   | 'SUPERVISOR_COHORT';
 
@@ -113,11 +117,12 @@ function CircularScoreGauge({
 }
 
 const GRADE_STACK_COLORS: Record<GradeCode, { bg: string; label: string }> = {
-  TB: { bg: 'bg-emerald-600', label: 'TB' },
-  B: { bg: 'bg-green-500', label: 'B' },
-  S: { bg: 'bg-amber-500', label: 'S' },
-  I: { bg: 'bg-orange-500', label: 'I' },
-  M: { bg: 'bg-red-600', label: 'M' },
+  TB: { bg: 'bg-emerald-600', label: '10' },
+  B: { bg: 'bg-green-500', label: '8' },
+  S: { bg: 'bg-amber-500', label: '6' },
+  I: { bg: 'bg-orange-500', label: '4' },
+  M: { bg: 'bg-red-500', label: '2' },
+  '1': { bg: 'bg-rose-700', label: '1' },
   NE: { bg: 'bg-slate-400', label: 'NE' },
 };
 
@@ -183,6 +188,8 @@ export function DashboardPage(): React.ReactElement {
   );
   const [selectedPillarCode, setSelectedPillarCode] =
     useState<PillarCode>('LEADERSHIP');
+  const [selectedItemExamCode, setSelectedItemExamCode] =
+    useState<ExamCode>('PEDA_AM_MC');
 
   // Filtres pour l'onglet Journal des Commentaires
   const [commentExamFilter, setCommentExamFilter] = useState<string>('ALL');
@@ -477,6 +484,19 @@ export function DashboardPage(): React.ReactElement {
           >
             <Layers className="h-4 w-4" />
             <span>Récapitulatif par Épreuve & Matrice des Jurys</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('ITEMS_TIMELINE')}
+            className={`flex items-center gap-2 rounded-lg px-3.5 py-2 text-xs font-bold transition ${
+              activeTab === 'ITEMS_TIMELINE'
+                ? 'bg-sky-600 text-white shadow-sm'
+                : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+            }`}
+          >
+            <BookOpen className="h-4 w-4" />
+            <span>Suivi par Question / Item dans le temps</span>
           </button>
 
           <button
@@ -805,12 +825,12 @@ export function DashboardPage(): React.ReactElement {
                             </span>
                           </div>
 
-                          {/* Histogramme empilé TB / B / S / I / M / NE */}
+                          {/* Histogramme empilé 10 / 8 / 6 / 4 / 2 / 1 / NE */}
                           {totalItemsWithNe > 0 ? (
                             <div className="space-y-1">
                               <div className="flex h-3 w-full overflow-hidden rounded-full bg-slate-100">
                                 {(
-                                  ['TB', 'B', 'S', 'I', 'M', 'NE'] as GradeCode[]
+                                  ['TB', 'B', 'S', 'I', 'M', '1', 'NE'] as GradeCode[]
                                 ).map((g) => {
                                   const count = cell.counts[g];
                                   if (count <= 0) return null;
@@ -820,18 +840,18 @@ export function DashboardPage(): React.ReactElement {
                                       key={g}
                                       style={{ width: `${pct}%` }}
                                       className={GRADE_STACK_COLORS[g].bg}
-                                      title={`${g} : ${count}`}
+                                      title={`${GRADE_STACK_COLORS[g].label} : ${count}`}
                                     />
                                   );
                                 })}
                               </div>
                               <div className="flex flex-wrap gap-2 text-[10px] text-slate-500">
                                 {(
-                                  ['TB', 'B', 'S', 'I', 'M', 'NE'] as GradeCode[]
+                                  ['TB', 'B', 'S', 'I', 'M', '1', 'NE'] as GradeCode[]
                                 ).map((g) =>
                                   cell.counts[g] > 0 ? (
                                     <span key={g} className="font-mono">
-                                      <strong>{g}:</strong> {cell.counts[g]}
+                                      <strong>{GRADE_STACK_COLORS[g].label}:</strong> {cell.counts[g]}
                                     </span>
                                   ) : null
                                 )}
@@ -861,9 +881,9 @@ export function DashboardPage(): React.ReactElement {
                 </CardTitle>
               </div>
               <CardDescription>
-                Lignes = Moniteurs Nationaux normalisés • Colonnes = les 10
-                épreuves réglementaires • Totaux marginaux de contrôle pour le DTF
-                et le Parrain.
+                Lignes = Moniteurs Nationaux normalisés • Colonnes = les 11
+                épreuves réglementaires • Totaux marginaux de contrôle pour
+                l’Administrateur et le Jury.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -933,6 +953,251 @@ export function DashboardPage(): React.ReactElement {
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {/* ONGLET 2B : SUIVI LONGITUDINAL PAR QUESTION / ITEM DANS LE TEMPS */}
+      {activeTab === 'ITEMS_TIMELINE' && (
+        <Card>
+          <CardHeader>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2 text-sky-700">
+                  <BookOpen className="h-5 w-5" />
+                  <CardTitle className="text-base">
+                    Suivi Longitudinal par Question / Item dans le Temps
+                  </CardTitle>
+                </div>
+                <CardDescription>
+                  Visualisez pour chaque question spécifique l’historique des notes (
+                  <code>10, 8, 6, 4, 2, 1, NE</code>), les commentaires associés et la
+                  tendance de progression.
+                </CardDescription>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-slate-600">
+                  Activité :
+                </span>
+                <select
+                  aria-label="Choisir l'activité pour le suivi par question"
+                  value={selectedItemExamCode}
+                  onChange={(e) =>
+                    setSelectedItemExamCode(e.target.value as ExamCode)
+                  }
+                  className="h-9 rounded-lg border border-sky-300 bg-white px-3 text-xs font-bold text-slate-900"
+                >
+                  {OFFICIAL_EXAM_TYPES.map((ex) => (
+                    <option key={ex.code} value={ex.code}>
+                      #{ex.display_order} — {ex.short_title} (
+                      {scoreboard.exams[ex.code]?.evaluationCount ?? 0} éval.)
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {(() => {
+              const examEvals = candidateEvaluations
+                .filter(
+                  (ev) =>
+                    ev.status === 'PUBLISHED' &&
+                    ev.exam_code === selectedItemExamCode
+                )
+                .sort((a, b) => a.event_date.localeCompare(b.event_date));
+              const examCriteria = OFFICIAL_CRITERIA.filter(
+                (c) => c.exam_code === selectedItemExamCode && c.is_active
+              ).sort((a, b) => a.order_in_exam - b.order_in_exam);
+
+              if (examEvals.length === 0) {
+                return (
+                  <div className="rounded-xl border bg-slate-50 p-8 text-center text-sm text-slate-500">
+                    Aucune évaluation publiée pour cette activité chez{' '}
+                    <strong>
+                      {activeCandidate.first_name} {activeCandidate.last_name}
+                    </strong>
+                    .
+                  </div>
+                );
+              }
+
+              return (
+                <div className="space-y-4">
+                  <div className="overflow-x-auto rounded-lg border">
+                    <table className="w-full text-left text-xs">
+                      <thead>
+                        <tr className="border-b bg-slate-900 text-white">
+                          <th className="px-3 py-2.5">Code</th>
+                          <th className="px-3 py-2.5">Pilier</th>
+                          <th className="px-3 py-2.5">Question évaluée</th>
+                          {examEvals.map((ev, idx) => (
+                            <th
+                              key={ev.id}
+                              className="px-2.5 py-2.5 text-center whitespace-nowrap"
+                              title={`Jury : ${ev.legacy_evaluator_raw ?? 'MN'}`}
+                            >
+                              <div>Séance #{idx + 1}</div>
+                              <div className="font-mono text-[10px] text-sky-300">
+                                {ev.event_date}
+                              </div>
+                              <div className="max-w-[110px] truncate text-[9px] font-normal text-slate-300">
+                                {ev.legacy_evaluator_raw ?? 'MN'}
+                              </div>
+                            </th>
+                          ))}
+                          <th className="px-3 py-2.5 text-right">Moyenne Item</th>
+                          <th className="px-3 py-2.5 text-center">Évolution</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        {examCriteria.map((crit) => {
+                          const gradesByEval = examEvals.map((ev) => {
+                            const found = evaluationScores.find(
+                              (s) =>
+                                s.evaluation_id === ev.id &&
+                                s.criterion_id === crit.id
+                            );
+                            return found?.grade ?? ('NE' as GradeCode);
+                          });
+
+                          const numericPoints = gradesByEval
+                            .filter(
+                              (g): g is Exclude<GradeCode, 'NE'> => g !== 'NE'
+                            )
+                            .map((g) => GRADE_POINTS[g]);
+
+                          const itemAvg =
+                            numericPoints.length > 0
+                              ? numericPoints.reduce((a, b) => a + b, 0) /
+                                numericPoints.length
+                              : null;
+
+                          let trendBadge: React.ReactNode = (
+                            <span className="text-slate-400">—</span>
+                          );
+                          if (numericPoints.length >= 2) {
+                            const firstPt = numericPoints[0];
+                            const lastPt =
+                              numericPoints[numericPoints.length - 1];
+                            const delta = lastPt - firstPt;
+                            if (delta > 0) {
+                              trendBadge = (
+                                <Badge className="bg-emerald-600 text-white">
+                                  +{delta} pts (En progrès)
+                                </Badge>
+                              );
+                            } else if (delta < 0) {
+                              trendBadge = (
+                                <Badge variant="destructive">
+                                  {delta} pts (Vigilance)
+                                </Badge>
+                              );
+                            } else if (lastPt <= 4) {
+                              trendBadge = (
+                                <Badge variant="destructive">
+                                  À retravailler ({lastPt}/10)
+                                </Badge>
+                              );
+                            } else {
+                              trendBadge = (
+                                <Badge variant="secondary">
+                                  Stable ({lastPt}/10)
+                                </Badge>
+                              );
+                            }
+                          } else if (
+                            numericPoints.length === 1 &&
+                            numericPoints[0] <= 4
+                          ) {
+                            trendBadge = (
+                              <Badge variant="destructive">
+                                À retravailler ({numericPoints[0]}/10)
+                              </Badge>
+                            );
+                          }
+
+                          return (
+                            <tr key={crit.id} className="hover:bg-slate-50">
+                              <td className="px-3 py-2.5 font-mono font-bold text-sky-700">
+                                [{crit.excel_col}]
+                              </td>
+                              <td className="px-3 py-2.5">
+                                <Badge variant="outline" className="text-[10px]">
+                                  {crit.pillar_code}
+                                </Badge>
+                              </td>
+                              <td className="px-3 py-2.5 font-medium text-slate-900">
+                                {crit.question_text}
+                              </td>
+                              {gradesByEval.map((g, idx) => (
+                                <td
+                                  key={examEvals[idx].id}
+                                  className="px-2.5 py-2.5 text-center"
+                                >
+                                  <span
+                                    className={`inline-flex min-w-[32px] items-center justify-center rounded-md px-2 py-0.5 font-mono text-xs font-extrabold text-white ${GRADE_STACK_COLORS[g].bg}`}
+                                  >
+                                    {GRADE_LABELS[g]}
+                                  </span>
+                                </td>
+                              ))}
+                              <td className="px-3 py-2.5 text-right font-mono font-bold text-slate-900">
+                                {itemAvg !== null
+                                  ? `${itemAvg.toFixed(1).replace('.', ',')} / 10 (${Math.round(
+                                      itemAvg * 10
+                                    )} %)`
+                                  : 'Non évalué'}
+                              </td>
+                              <td className="px-3 py-2.5 text-center">
+                                {trendBadge}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Commentaires associés aux séances de cette activité */}
+                  <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-2.5">
+                    <div className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                      Commentaires des Moniteurs Nationaux sur cette activité (
+                      {examEvals.length} séance(s))
+                    </div>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      {examEvals.map((ev, idx) => (
+                        <div
+                          key={ev.id}
+                          className="rounded-lg border bg-white p-3 text-xs space-y-1.5"
+                        >
+                          <div className="flex items-center justify-between font-semibold text-slate-800">
+                            <span>
+                              Séance #{idx + 1} — {ev.event_date}
+                            </span>
+                            <span className="text-sky-700">
+                              {ev.legacy_evaluator_raw ?? 'MN'}
+                            </span>
+                          </div>
+                          <div>
+                            <strong className="text-emerald-700">
+                              À garder :
+                            </strong>{' '}
+                            {ev.strengths_comment || '—'}
+                          </div>
+                          <div>
+                            <strong className="text-amber-700">
+                              À améliorer :
+                            </strong>{' '}
+                            {ev.improvements_comment || '—'}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+          </CardContent>
+        </Card>
       )}
 
       {/* ONGLET 3 : JOURNAL DES COMMENTAIRES DYNAMIQUE (TIMELINE SANS LIGNES VIDES) */}

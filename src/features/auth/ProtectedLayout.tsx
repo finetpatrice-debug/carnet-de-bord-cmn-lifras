@@ -61,7 +61,7 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Tableau de Bord',
     shortMobileLabel: 'Tableau',
     icon: LayoutDashboard,
-    allowedRoles: ['ADMIN_DTF', 'MN_EVALUATOR', 'PARRAIN_MN', 'CMN_CANDIDATE'],
+    allowedRoles: ['ADMIN_DTF', 'MN_EVALUATOR', 'CMN_CANDIDATE'],
   },
   {
     to: '/evaluations',
@@ -89,7 +89,6 @@ const NAV_ITEMS: NavItem[] = [
 const ALL_ROLES: UserRole[] = [
   'ADMIN_DTF',
   'MN_EVALUATOR',
-  'PARRAIN_MN',
   'CMN_CANDIDATE',
 ];
 

@@ -14,7 +14,7 @@ import type {
   Profile,
   UserRole,
 } from '@/domain/types';
-import { USER_ROLE_LABELS } from '@/domain/types';
+import { GRADE_LABELS, USER_ROLE_LABELS } from '@/domain/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -38,7 +38,7 @@ import {
   X,
 } from 'lucide-react';
 
-const GRADES_LIST: GradeCode[] = ['TB', 'B', 'S', 'I', 'M', 'NE'];
+const GRADES_LIST: GradeCode[] = ['TB', 'B', 'S', 'I', 'M', '1', 'NE'];
 
 export function AdminPage(): React.ReactElement {
   const { profile: activeAdmin } = useAuth();
@@ -70,7 +70,6 @@ export function AdminPage(): React.ReactElement {
   const [newCandDives, setNewCandDives] = useState('500');
   const [newCandCfpsYear, setNewCandCfpsYear] = useState('2020');
   const [newCandMfYear, setNewCandMfYear] = useState('2023');
-  const [newCandSponsorId, setNewCandSponsorId] = useState<string>('mn-001');
   const [newCandPhotoDataUrl, setNewCandPhotoDataUrl] = useState<string | null>(null);
   const [candidateCreatedMsg, setCandidateCreatedMsg] = useState<string | null>(null);
 
@@ -96,7 +95,7 @@ export function AdminPage(): React.ReactElement {
       id: newId,
       role: newUserRole,
       cohort_id: 'cohort-2026',
-      sponsor_mn_id: newCandSponsorId || null,
+      sponsor_mn_id: null,
       last_name: newCandLastName.trim(),
       first_name: newCandFirstName.trim(),
       birth_date: null,
@@ -333,12 +332,11 @@ export function AdminPage(): React.ReactElement {
                     [
                       'CMN_CANDIDATE',
                       'MN_EVALUATOR',
-                      'PARRAIN_MN',
                       'ADMIN_DTF',
                     ] as UserRole[]
                   ).map((r) => (
                     <option key={r} value={r}>
-                      {USER_ROLE_LABELS[r]} ({r})
+                      {USER_ROLE_LABELS[r]}
                     </option>
                   ))}
                 </select>
@@ -447,23 +445,6 @@ export function AdminPage(): React.ReactElement {
                   onChange={(e) => setNewCandDives(e.target.value)}
                   className="mt-1 bg-white"
                 />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-slate-700">
-                  Parrain Moniteur National
-                </label>
-                <select
-                  aria-label="Parrain Moniteur National"
-                  value={newCandSponsorId}
-                  onChange={(e) => setNewCandSponsorId(e.target.value)}
-                  className="mt-1 flex h-9 w-full rounded-md border border-slate-300 bg-white px-3 text-xs font-medium text-slate-900"
-                >
-                  {mnDirectory.map((mn) => (
-                    <option key={mn.id} value={mn.id}>
-                      {mn.first_name} {mn.last_name} (#{mn.febras_number})
-                    </option>
-                  ))}
-                </select>
               </div>
               <div>
                 <label className="text-xs font-semibold text-slate-700">
@@ -707,7 +688,7 @@ export function AdminPage(): React.ReactElement {
                               >
                                 {GRADES_LIST.map((g) => (
                                   <option key={g} value={g}>
-                                    {g}
+                                    {GRADE_LABELS[g]}
                                   </option>
                                 ))}
                               </select>
@@ -768,13 +749,14 @@ export function AdminPage(): React.ReactElement {
           <div className="flex items-center gap-2 text-sky-700">
             <Users className="h-5 w-5" />
             <CardTitle className="text-base">
-              2. Gestion des Profils, Administrateurs DTF, Moniteurs Nationaux & Alias Excel
+              2. Gestion des Profils, Administrateurs, Moniteurs Nationaux (MN) & Alias Excel
             </CardTitle>
           </div>
           <CardDescription>
             Modifiez directement ici le rôle d’un utilisateur (
-            <code>ADMIN_DTF</code>, <code>MN_EVALUATOR</code>,{' '}
-            <code>PARRAIN_MN</code>, <code>CMN_CANDIDATE</code>) et gérez les
+            <strong>Administrateur</strong>,{' '}
+            <strong>Moniteur National (MN) Évaluateur</strong>,{' '}
+            <strong>Candidat Moniteur National (CMN)</strong>) et gérez les
             variantes orthographiques (<code>profiles.aliases</code>) pour l’import
             Excel.
           </CardDescription>
@@ -856,12 +838,11 @@ export function AdminPage(): React.ReactElement {
                       [
                         'ADMIN_DTF',
                         'MN_EVALUATOR',
-                        'PARRAIN_MN',
                         'CMN_CANDIDATE',
                       ] as UserRole[]
                     ).map((r) => (
                       <option key={r} value={r}>
-                        {USER_ROLE_LABELS[r]} ({r})
+                        {USER_ROLE_LABELS[r]}
                       </option>
                     ))}
                   </select>
@@ -962,7 +943,7 @@ export function AdminPage(): React.ReactElement {
                 </div>
                 <div className="sm:col-span-3">
                   <label className="text-xs font-semibold text-slate-700">
-                    Photo du profil (Tous les profils : CMN, MN, Parrain, DTF)
+                    Photo du profil (Tous les profils : CMN, MN, Administrateur)
                   </label>
                   <div className="mt-1 flex flex-wrap items-center gap-3">
                     {editingProfile.photo_storage_path ? (
@@ -1059,7 +1040,6 @@ export function AdminPage(): React.ReactElement {
                           [
                             'ADMIN_DTF',
                             'MN_EVALUATOR',
-                            'PARRAIN_MN',
                             'CMN_CANDIDATE',
                           ] as UserRole[]
                         ).map((r) => (

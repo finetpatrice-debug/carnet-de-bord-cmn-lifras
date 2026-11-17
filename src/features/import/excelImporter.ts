@@ -191,20 +191,23 @@ export function normalizeGradeCell(rawVal: unknown): GradeCode | null {
   const cleaned = String(rawVal).trim().toUpperCase();
   if (!cleaned) return null;
 
-  if (cleaned === 'TB' || cleaned === 'TRÈS BIEN' || cleaned === 'TRES BIEN') {
+  if (cleaned === 'TB' || cleaned === '10' || cleaned === 'TRÈS BIEN' || cleaned === 'TRES BIEN') {
     return 'TB';
   }
-  if (cleaned === 'B' || cleaned === 'BIEN') {
+  if (cleaned === 'B' || cleaned === '8' || cleaned === 'BIEN') {
     return 'B';
   }
-  if (cleaned === 'S' || cleaned === 'SATISFAISANT' || cleaned === 'SUFFISANT') {
+  if (cleaned === 'S' || cleaned === '6' || cleaned === 'SATISFAISANT' || cleaned === 'SUFFISANT') {
     return 'S';
   }
-  if (cleaned === 'I' || cleaned === 'INSUFFISANT') {
+  if (cleaned === 'I' || cleaned === '4' || cleaned === 'INSUFFISANT') {
     return 'I';
   }
-  if (cleaned === 'M' || cleaned === 'MAUVAIS' || cleaned === 'MEDIOCRE') {
+  if (cleaned === 'M' || cleaned === '2' || cleaned === 'MAUVAIS' || cleaned === 'MEDIOCRE') {
     return 'M';
+  }
+  if (cleaned === '1') {
+    return '1';
   }
   if (
     cleaned === 'NE' ||

@@ -5,25 +5,23 @@
  * ============================================================================
  */
 
-// 1. Rôles utilisateurs stricts (RGPD & Séparation des rôles)
+// 1. Rôles utilisateurs stricts (RGPD & Séparation des rôles — Parrain MN supprimé)
 export type UserRole =
   | 'ADMIN_DTF'
   | 'MN_EVALUATOR'
-  | 'PARRAIN_MN'
   | 'CMN_CANDIDATE';
 
 export const USER_ROLE_LABELS: Record<UserRole, string> = {
-  ADMIN_DTF: 'Administrateur DTF',
-  MN_EVALUATOR: 'Moniteur National (Évaluateur)',
-  PARRAIN_MN: 'Parrain MN',
+  ADMIN_DTF: 'Administrateur',
+  MN_EVALUATOR: 'Moniteur National (MN) Évaluateur',
   CMN_CANDIDATE: 'Candidat Moniteur National (CMN)',
 };
 
 // 2. Modes de calcul
 export type ScoringMode = 'ISO_EXCEL' | 'WEIGHTED';
 
-// 3. Échelle stricte des cotations (Invariants Métier)
-export type GradeCode = 'TB' | 'B' | 'S' | 'I' | 'M' | 'NE';
+// 3. Échelle stricte des cotations (6 paliers numériques : 10, 8, 6, 4, 2, 1 + NE)
+export type GradeCode = 'TB' | 'B' | 'S' | 'I' | 'M' | '1' | 'NE';
 
 export const GRADE_POINTS: Record<Exclude<GradeCode, 'NE'>, number> = {
   TB: 10,
@@ -31,15 +29,17 @@ export const GRADE_POINTS: Record<Exclude<GradeCode, 'NE'>, number> = {
   S: 6,
   I: 4,
   M: 2,
+  '1': 1,
 };
 
 export const GRADE_LABELS: Record<GradeCode, string> = {
-  TB: 'Très Bien (10)',
-  B: 'Bien (8)',
-  S: 'Satisfaisant (6)',
-  I: 'Insuffisant (4)',
-  M: 'Mauvais (2)',
-  NE: 'Non Évalué',
+  TB: '10',
+  B: '8',
+  S: '6',
+  I: '4',
+  M: '2',
+  '1': '1',
+  NE: 'NE',
 };
 
 // 4. Codes des 5 Piliers de compétences du Moniteur National
@@ -50,7 +50,7 @@ export type PillarCode =
   | 'CONNAISSANCES'
   | 'ORGANISATEUR';
 
-// 5. Codes des 10 Épreuves réglementaires du cursus CMN
+// 5. Codes des 11 Épreuves réglementaires du cursus CMN (incluant Directeur de plongée)
 export type ExamCode =
   | 'COURS_MF'
   | 'PEDA_AM_MC'
@@ -61,6 +61,7 @@ export type ExamCode =
   | 'GESTION_DEBAT'
   | 'ORGA_MER'
   | 'ORGA_CARRIERE'
+  | 'DIRECTEUR_PLONGEE'
   | 'STAGE_FINAL';
 
 // 6. Statut logique d'une évaluation (Aucune suppression physique)

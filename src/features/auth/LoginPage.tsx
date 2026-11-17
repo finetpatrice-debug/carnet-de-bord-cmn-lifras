@@ -19,7 +19,6 @@ import { ShieldCheck, Lock, UserCheck } from 'lucide-react';
 const ROLES_LIST: UserRole[] = [
   'ADMIN_DTF',
   'MN_EVALUATOR',
-  'PARRAIN_MN',
   'CMN_CANDIDATE',
 ];
 
@@ -137,7 +136,7 @@ export function LoginPage(): React.ReactElement {
               Accès rapide par Rôle Réglementaire
             </CardTitle>
             <CardDescription className="text-slate-300">
-              Testez immédiatement le layout protégé et le cloisonnement des 4 rôles
+              Testez immédiatement le layout protégé et le cloisonnement des 3 rôles
               du cursus Candidat Moniteur National.
             </CardDescription>
           </CardHeader>
@@ -153,7 +152,6 @@ export function LoginPage(): React.ReactElement {
                   <div className="text-sm font-semibold text-white">
                     {USER_ROLE_LABELS[role]}
                   </div>
-                  <div className="text-xs text-slate-400">Code rôle : {role}</div>
                 </div>
                 <UserCheck className="h-4 w-4 text-sky-400" />
               </button>

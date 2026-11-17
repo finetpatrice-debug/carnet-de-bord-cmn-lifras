@@ -21,8 +21,8 @@ import type {
 import { EXAM_PILLAR_MATRIX, OFFICIAL_EXAM_TYPES, OFFICIAL_PILLARS } from './referentials';
 
 /**
- * 1. Barème officiel strict :
- * TB = 10, B = 8, S = 6, I = 4, M = 2.
+ * 1. Barème officiel strict (6 niveaux : 10, 8, 6, 4, 2, 1 + NE) :
+ * TB = 10, B = 8, S = 6, I = 4, M = 2, '1' = 1.
  * La note NE est comptabilisée dans la distribution statistique (counts.NE),
  * mais ignorée dans la somme pondérée K et dans le total des items cotés J.
  */
@@ -32,6 +32,7 @@ export const GRADE_WEIGHTS: Record<Exclude<GradeCode, 'NE'>, number> = {
   S: 6,
   I: 4,
   M: 2,
+  '1': 1,
 };
 
 export interface GradeDistributionCounts {
@@ -40,6 +41,7 @@ export interface GradeDistributionCounts {
   S: number;
   I: number;
   M: number;
+  '1': number;
   NE: number;
 }
 
@@ -47,9 +49,9 @@ export interface PillarCellComputation {
   examCode: ExamCode;
   pillarCode: PillarCode;
   counts: GradeDistributionCounts;
-  /** J = n_TB + n_B + n_S + n_I + n_M (NE exclu du dénominateur) */
+  /** J = n_TB + n_B + n_S + n_I + n_M + n_1 (NE exclu du dénominateur) */
   J: number;
-  /** K = 10*n_TB + 8*n_B + 6*n_S + 4*n_I + 2*n_M */
+  /** K = 10*n_TB + 8*n_B + 6*n_S + 4*n_I + 2*n_M + 1*n_1 */
   K: number;
   /** L = J > 0 ? (K / J) / 10 : 0  (équivalent exact de =IFERROR(K/J, 0)/10) */
   L: number;
@@ -80,7 +82,7 @@ export interface CandidateScoreboardResult {
  * Crée un objet de comptage vierge pour une cellule (exam_code, pillar_code).
  */
 export function createEmptyGradeCounts(): GradeDistributionCounts {
-  return { TB: 0, B: 0, S: 0, I: 0, M: 0, NE: 0 };
+  return { TB: 0, B: 0, S: 0, I: 0, M: 0, '1': 0, NE: 0 };
 }
 
 /**
@@ -113,16 +115,19 @@ export function computePillarCellFromCounts(
     S: countsInput.S ?? 0,
     I: countsInput.I ?? 0,
     M: countsInput.M ?? 0,
+    '1': countsInput['1'] ?? 0,
     NE: countsInput.NE ?? 0,
   };
 
-  const J = counts.TB + counts.B + counts.S + counts.I + counts.M;
+  const J =
+    counts.TB + counts.B + counts.S + counts.I + counts.M + counts['1'];
   const K =
     GRADE_WEIGHTS.TB * counts.TB +
     GRADE_WEIGHTS.B * counts.B +
     GRADE_WEIGHTS.S * counts.S +
     GRADE_WEIGHTS.I * counts.I +
-    GRADE_WEIGHTS.M * counts.M;
+    GRADE_WEIGHTS.M * counts.M +
+    GRADE_WEIGHTS['1'] * counts['1'];
 
   const L = J > 0 ? K / J / 10 : 0;
 

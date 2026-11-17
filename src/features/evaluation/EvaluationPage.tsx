@@ -12,13 +12,14 @@ import {
   OFFICIAL_PILLARS,
 } from '@/domain/referentials';
 import { computeExamAverage } from '@/domain/scoringEngine';
-import type {
-  Criterion,
-  EvaluationScore,
-  ExamCode,
-  GradeCode,
-  PillarCode,
-  Profile,
+import {
+  GRADE_LABELS,
+  type Criterion,
+  type EvaluationScore,
+  type ExamCode,
+  type GradeCode,
+  type PillarCode,
+  type Profile,
 } from '@/domain/types';
 import { useSpeechDictation } from './useSpeechDictation';
 import { Button } from '@/components/ui/button';
@@ -54,14 +55,14 @@ interface GradeButtonConfig {
 }
 
 /**
- * 6 boutons tactiles larges et contrastés conformes au Sprint 4 :
- * TB (vert émeraude), B (vert clair), S (ambre), I (orange), M (rouge), NE (gris ardoise)
+ * 7 boutons tactiles larges et contrastés pour le barème officiel à 6 niveaux (10, 8, 6, 4, 2, 1) + NE :
+ * 10 (vert émeraude), 8 (vert clair), 6 (ambre), 4 (orange), 2 (rouge-orangé), 1 (rouge foncé), NE (gris ardoise)
  */
 const TACTILE_GRADE_BUTTONS: GradeButtonConfig[] = [
   {
     code: 'TB',
-    label: 'TB',
-    pointsLabel: '10 pts',
+    label: '10',
+    pointsLabel: '10 / 10',
     activeClass:
       'bg-emerald-600 text-white border-emerald-700 ring-2 ring-emerald-400 shadow-md scale-[1.02]',
     inactiveClass:
@@ -69,8 +70,8 @@ const TACTILE_GRADE_BUTTONS: GradeButtonConfig[] = [
   },
   {
     code: 'B',
-    label: 'B',
-    pointsLabel: '8 pts',
+    label: '8',
+    pointsLabel: '8 / 10',
     activeClass:
       'bg-green-500 text-white border-green-600 ring-2 ring-green-300 shadow-md scale-[1.02]',
     inactiveClass:
@@ -78,8 +79,8 @@ const TACTILE_GRADE_BUTTONS: GradeButtonConfig[] = [
   },
   {
     code: 'S',
-    label: 'S',
-    pointsLabel: '6 pts',
+    label: '6',
+    pointsLabel: '6 / 10',
     activeClass:
       'bg-amber-500 text-white border-amber-600 ring-2 ring-amber-300 shadow-md scale-[1.02]',
     inactiveClass:
@@ -87,8 +88,8 @@ const TACTILE_GRADE_BUTTONS: GradeButtonConfig[] = [
   },
   {
     code: 'I',
-    label: 'I',
-    pointsLabel: '4 pts',
+    label: '4',
+    pointsLabel: '4 / 10',
     activeClass:
       'bg-orange-500 text-white border-orange-600 ring-2 ring-orange-300 shadow-md scale-[1.02]',
     inactiveClass:
@@ -96,17 +97,26 @@ const TACTILE_GRADE_BUTTONS: GradeButtonConfig[] = [
   },
   {
     code: 'M',
-    label: 'M',
-    pointsLabel: '2 pts',
+    label: '2',
+    pointsLabel: '2 / 10',
     activeClass:
-      'bg-red-600 text-white border-red-700 ring-2 ring-red-300 shadow-md scale-[1.02]',
+      'bg-red-500 text-white border-red-600 ring-2 ring-red-300 shadow-md scale-[1.02]',
     inactiveClass:
       'bg-red-50 text-red-900 border-red-200 hover:bg-red-100',
   },
   {
+    code: '1',
+    label: '1',
+    pointsLabel: '1 / 10',
+    activeClass:
+      'bg-rose-700 text-white border-rose-800 ring-2 ring-rose-400 shadow-md scale-[1.02]',
+    inactiveClass:
+      'bg-rose-50 text-rose-900 border-rose-200 hover:bg-rose-100',
+  },
+  {
     code: 'NE',
     label: 'NE',
-    pointsLabel: 'Exclu',
+    pointsLabel: 'Non évalué',
     activeClass:
       'bg-slate-600 text-white border-slate-700 ring-2 ring-slate-400 shadow-md scale-[1.02]',
     inactiveClass:
@@ -710,7 +720,7 @@ export function EvaluationPage(): React.ReactElement {
                         </p>
                         {selectedGrade ? (
                           <Badge className="shrink-0 bg-slate-800 text-white">
-                            {selectedGrade}
+                            {GRADE_LABELS[selectedGrade]}
                           </Badge>
                         ) : (
                           <Badge
@@ -722,11 +732,11 @@ export function EvaluationPage(): React.ReactElement {
                         )}
                       </div>
 
-                      {/* 6 boutons tactiles larges et contrastés utilisables à une main */}
+                      {/* 7 boutons tactiles larges et contrastés utilisables à une main (10, 8, 6, 4, 2, 1, NE) */}
                       <div
                         role="group"
                         aria-label={`Cotations pour la question ${criterion.excel_col}`}
-                        className="grid grid-cols-6 gap-1.5 sm:gap-2"
+                        className="grid grid-cols-7 gap-1 sm:gap-2"
                       >
                         {TACTILE_GRADE_BUTTONS.map((btn) => {
                           const isActive = selectedGrade === btn.code;

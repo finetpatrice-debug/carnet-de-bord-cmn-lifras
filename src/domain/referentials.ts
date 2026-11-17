@@ -1,6 +1,6 @@
 import type { Criterion, ExamCode, ExamType, Pillar, PillarCode } from './types';
 
-export const APP_VERSION = 'v1.5.2';
+export const APP_VERSION = 'v1.6.0';
 
 export const OFFICIAL_PILLARS: Pillar[] = [
   {
@@ -96,15 +96,21 @@ export const OFFICIAL_EXAM_TYPES: ExamType[] = [
     display_order: 9,
   },
   {
+    code: 'DIRECTEUR_PLONGEE',
+    short_title: 'Directeur de plongée',
+    forms_label: 'Directeur de plongée',
+    display_order: 10,
+  },
+  {
     code: 'STAGE_FINAL',
     short_title: 'Stage Final',
     forms_label: 'Stage final',
-    display_order: 10,
+    display_order: 11,
   },
 ];
 
 /**
- * Couples officiels (exam_code, pillar_code) présents dans la table des 99 critères.
+ * Couples officiels (exam_code, pillar_code) présents dans la table des critères.
  */
 export const EXAM_PILLAR_MATRIX: Record<ExamCode, PillarCode[]> = {
   COURS_MF: ['LEADERSHIP', 'FORMATEUR', 'CONNAISSANCES'],
@@ -116,6 +122,7 @@ export const EXAM_PILLAR_MATRIX: Record<ExamCode, PillarCode[]> = {
   GESTION_DEBAT: ['LEADERSHIP', 'CONCEPTION', 'CONNAISSANCES'],
   ORGA_MER: ['LEADERSHIP', 'ORGANISATEUR', 'CONNAISSANCES'],
   ORGA_CARRIERE: ['LEADERSHIP', 'FORMATEUR', 'ORGANISATEUR', 'CONNAISSANCES'],
+  DIRECTEUR_PLONGEE: ['LEADERSHIP', 'ORGANISATEUR', 'CONNAISSANCES'],
   STAGE_FINAL: [
     'LEADERSHIP',
     'FORMATEUR',
@@ -247,4 +254,14 @@ export const OFFICIAL_CRITERIA: Criterion[] = [
   { id: 97, excel_col: 'DA', exam_code: 'STAGE_FINAL', pillar_code: 'CONNAISSANCES', order_in_exam: 25, question_text: "Le CMN a-t-il les connaissances théoriques pour former un moniteur ?", is_active: true },
   { id: 98, excel_col: 'DB', exam_code: 'STAGE_FINAL', pillar_code: 'CONNAISSANCES', order_in_exam: 26, question_text: "Le CMN a-t-il les connaissances suffisantes en organisation ?", is_active: true },
   { id: 99, excel_col: 'DC', exam_code: 'STAGE_FINAL', pillar_code: 'CONNAISSANCES', order_in_exam: 27, question_text: "Le CMN a-t-il les connaissances théoriques suffisantes sur nos règles et règlements ?", is_active: true },
+
+  // 11. DIRECTEUR_PLONGEE (Critères 100 à 107 — 8 critères opérationnels Directeur de plongée)
+  { id: 100, excel_col: 'DP1', exam_code: 'DIRECTEUR_PLONGEE', pillar_code: 'LEADERSHIP', order_in_exam: 1, question_text: "Le CMN fait-il preuve d'autorité naturelle, de calme et de prestance dans son rôle de Directeur de plongée ?", is_active: true },
+  { id: 101, excel_col: 'DP2', exam_code: 'DIRECTEUR_PLONGEE', pillar_code: 'LEADERSHIP', order_in_exam: 2, question_text: "Le CMN communique-t-il clairement les consignes et sait-il trancher en cas d'imprévu ou d'adaptation de plongée ?", is_active: true },
+  { id: 102, excel_col: 'DP3', exam_code: 'DIRECTEUR_PLONGEE', pillar_code: 'ORGANISATEUR', order_in_exam: 3, question_text: "Le briefing général du Directeur de plongée (site, dangers, sécurité, paramètres) est-il structuré et complet ?", is_active: true },
+  { id: 103, excel_col: 'DP4', exam_code: 'DIRECTEUR_PLONGEE', pillar_code: 'ORGANISATEUR', order_in_exam: 4, question_text: "La composition des palanquées et la tenue de la feuille de sécurité (heures, profondeurs, gaz) sont-elles rigoureuses ?", is_active: true },
+  { id: 104, excel_col: 'DP5', exam_code: 'DIRECTEUR_PLONGEE', pillar_code: 'ORGANISATEUR', order_in_exam: 5, question_text: "Le dispositif de sécurité surface (oxygène, trousse de secours, moyens d'alerte, bloc de secours) est-il vérifié et opérationnel ?", is_active: true },
+  { id: 105, excel_col: 'DP6', exam_code: 'DIRECTEUR_PLONGEE', pillar_code: 'ORGANISATEUR', order_in_exam: 6, question_text: "À la sortie de l'eau, le Directeur de plongée contrôle-t-il systématiquement les paramètres réalisés et l'état des plongeurs ?", is_active: true },
+  { id: 106, excel_col: 'DP7', exam_code: 'DIRECTEUR_PLONGEE', pillar_code: 'CONNAISSANCES', order_in_exam: 7, question_text: "Le CMN maîtrise-t-il les prérogatives LIFRAS, les règles de décompression et les procédures d'urgence en tant que DP ?", is_active: true },
+  { id: 107, excel_col: 'DP8', exam_code: 'DIRECTEUR_PLONGEE', pillar_code: 'CONNAISSANCES', order_in_exam: 8, question_text: "Le CMN connaît-il parfaitement les règlements particuliers du site de plongée et les obligations légales du DP ?", is_active: true },
 ];
