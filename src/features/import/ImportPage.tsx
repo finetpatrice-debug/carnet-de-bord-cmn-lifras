@@ -37,7 +37,8 @@ import {
 
 export function ImportPage(): React.ReactElement {
   const { profile: activeAdmin } = useAuth();
-  const { mnDirectory, addAliasToMn, importCandidateWorkbookData } = useAdminStore();
+  const { mnDirectory, candidates, addAliasToMn, importCandidateWorkbookData } =
+    useAdminStore();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [isDragging, setIsDragging] = useState(false);
@@ -135,35 +136,54 @@ export function ImportPage(): React.ReactElement {
   const handleConfirmDatabaseImport = (): void => {
     if (!preview) return;
     const nowIso = new Date().toISOString();
-    const candidateId = `cand-${preview.candidate.last_name
-      .toLowerCase()
-      .replace(/[^a-z0-9]/g, '')}-${Date.now().toString().slice(-4)}`;
+    const existingCandidate = candidates.find(
+      (c) =>
+        c.email.toLowerCase() === preview.candidate.email.toLowerCase() ||
+        (c.last_name.toLowerCase() === preview.candidate.last_name.toLowerCase() &&
+          c.first_name.toLowerCase() === preview.candidate.first_name.toLowerCase())
+    );
+    const candidateId =
+      existingCandidate?.id ??
+      `cand-${preview.candidate.last_name
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '')}-${Date.now().toString().slice(-4)}`;
 
     const candidateProfile: Profile = {
       id: candidateId,
-      role: 'CMN_CANDIDATE',
-      cohort_id: 'cohort-2026',
-      sponsor_mn_id: null,
+      role: existingCandidate?.role ?? 'CMN_CANDIDATE',
+      cohort_id: existingCandidate?.cohort_id ?? 'cohort-2026',
+      sponsor_mn_id: existingCandidate?.sponsor_mn_id ?? null,
       last_name: preview.candidate.last_name,
       first_name: preview.candidate.first_name,
-      birth_date: preview.candidate.birth_date,
-      street_address: preview.candidate.street_address,
-      postal_code: preview.candidate.postal_code,
-      city: preview.candidate.city,
-      phone_landline: preview.candidate.phone_landline,
-      phone_gsm: preview.candidate.phone_gsm,
+      birth_date: preview.candidate.birth_date ?? existingCandidate?.birth_date ?? null,
+      street_address:
+        preview.candidate.street_address ?? existingCandidate?.street_address ?? null,
+      postal_code:
+        preview.candidate.postal_code ?? existingCandidate?.postal_code ?? null,
+      city: preview.candidate.city ?? existingCandidate?.city ?? null,
+      phone_landline:
+        preview.candidate.phone_landline ?? existingCandidate?.phone_landline ?? null,
+      phone_gsm: preview.candidate.phone_gsm ?? existingCandidate?.phone_gsm ?? null,
       email: preview.candidate.email,
-      febras_number: preview.candidate.febras_number,
-      cfps_year: preview.candidate.cfps_year,
-      mf_year: preview.candidate.mf_year,
-      dives_count: preview.candidate.dives_count,
-      club_name: preview.candidate.club_name,
-      club_president: preview.candidate.club_president,
-      club_head_instructor: preview.candidate.club_head_instructor,
-      club_head_gsm: null,
-      photo_storage_path: null,
-      aliases: [`${preview.candidate.last_name} ${preview.candidate.first_name}`],
-      created_at: nowIso,
+      febras_number:
+        preview.candidate.febras_number ?? existingCandidate?.febras_number ?? null,
+      cfps_year: preview.candidate.cfps_year ?? existingCandidate?.cfps_year ?? null,
+      mf_year: preview.candidate.mf_year ?? existingCandidate?.mf_year ?? null,
+      dives_count:
+        preview.candidate.dives_count ?? existingCandidate?.dives_count ?? null,
+      club_name: preview.candidate.club_name ?? existingCandidate?.club_name ?? null,
+      club_president:
+        preview.candidate.club_president ?? existingCandidate?.club_president ?? null,
+      club_head_instructor:
+        preview.candidate.club_head_instructor ??
+        existingCandidate?.club_head_instructor ??
+        null,
+      club_head_gsm: existingCandidate?.club_head_gsm ?? null,
+      photo_storage_path: existingCandidate?.photo_storage_path ?? null,
+      aliases: existingCandidate?.aliases ?? [
+        `${preview.candidate.last_name} ${preview.candidate.first_name}`,
+      ],
+      created_at: existingCandidate?.created_at ?? nowIso,
       updated_at: nowIso,
     };
 

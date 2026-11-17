@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import type {
   AuditLog,
   Evaluation,
@@ -399,6 +399,25 @@ function buildInitialDataset(): {
 
 const INITIAL_DATASET = buildInitialDataset();
 
+const STORAGE_KEYS = {
+  MN_DIRECTORY: 'cmn_lifras_mn_directory_v1',
+  CANDIDATES: 'cmn_lifras_candidates_v1',
+  EVALUATIONS: 'cmn_lifras_evaluations_v1',
+  SCORES: 'cmn_lifras_scores_v1',
+  AUDIT_LOGS: 'cmn_lifras_audit_logs_v1',
+} as const;
+
+function loadFromStorage<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw) as T;
+    return parsed ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 const AdminStoreContext = createContext<AdminStoreContextValue | undefined>(undefined);
 
 export function AdminStoreProvider({
@@ -406,15 +425,61 @@ export function AdminStoreProvider({
 }: {
   children: React.ReactNode;
 }): React.ReactElement {
-  const [mnDirectory, setMnDirectory] = useState<Profile[]>(INITIAL_MN_DIRECTORY);
-  const [candidates, setCandidates] = useState<Profile[]>(INITIAL_CANDIDATES);
-  const [evaluations, setEvaluations] = useState<Evaluation[]>(
-    INITIAL_DATASET.evaluations
+  const [mnDirectory, setMnDirectory] = useState<Profile[]>(() =>
+    loadFromStorage(STORAGE_KEYS.MN_DIRECTORY, INITIAL_MN_DIRECTORY)
   );
-  const [evaluationScores, setEvaluationScores] = useState<EvaluationScore[]>(
-    INITIAL_DATASET.scores
+  const [candidates, setCandidates] = useState<Profile[]>(() =>
+    loadFromStorage(STORAGE_KEYS.CANDIDATES, INITIAL_CANDIDATES)
   );
-  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [evaluations, setEvaluations] = useState<Evaluation[]>(() =>
+    loadFromStorage(STORAGE_KEYS.EVALUATIONS, INITIAL_DATASET.evaluations)
+  );
+  const [evaluationScores, setEvaluationScores] = useState<EvaluationScore[]>(() =>
+    loadFromStorage(STORAGE_KEYS.SCORES, INITIAL_DATASET.scores)
+  );
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>(() =>
+    loadFromStorage(STORAGE_KEYS.AUDIT_LOGS, [])
+  );
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.MN_DIRECTORY, JSON.stringify(mnDirectory));
+    } catch {
+      // Ignore quota errors
+    }
+  }, [mnDirectory]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.CANDIDATES, JSON.stringify(candidates));
+    } catch {
+      // Ignore quota errors
+    }
+  }, [candidates]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.EVALUATIONS, JSON.stringify(evaluations));
+    } catch {
+      // Ignore quota errors
+    }
+  }, [evaluations]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.SCORES, JSON.stringify(evaluationScores));
+    } catch {
+      // Ignore quota errors
+    }
+  }, [evaluationScores]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEYS.AUDIT_LOGS, JSON.stringify(auditLogs));
+    } catch {
+      // Ignore quota errors
+    }
+  }, [auditLogs]);
 
   const addAliasToMn = (mnProfileId: string, alias: string): void => {
     const trimmed = alias.trim();
@@ -454,7 +519,20 @@ export function AdminStoreProvider({
       return [...prev, payload.candidateProfile];
     });
 
-    setEvaluations((prev) => [...prev, ...payload.newEvaluations]);
+    setEvaluations((prev) => {
+      const legacyIds = new Set(
+        payload.newEvaluations
+          .map((e) => e.legacy_row_id)
+          .filter((id): id is number => id !== null && id !== undefined)
+      );
+      const filtered = prev.filter(
+        (ev) =>
+          ev.candidate_id !== payload.candidateProfile.id ||
+          ev.legacy_row_id === null ||
+          !legacyIds.has(ev.legacy_row_id)
+      );
+      return [...filtered, ...payload.newEvaluations];
+    });
     setEvaluationScores((prev) => [...prev, ...payload.newScores]);
     setAuditLogs((prev) => [payload.auditLog, ...prev]);
   };

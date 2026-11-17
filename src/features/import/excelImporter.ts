@@ -263,8 +263,34 @@ export function extractCandidateProfileFromSheet(
   const streetAddress = normalizeTextIdentifier(readCellRaw(infoSheet, 'D16'));
   const postalCode = normalizeTextIdentifier(readCellRaw(infoSheet, 'D18'));
   const city = normalizeTextIdentifier(readCellRaw(infoSheet, 'G18'));
-  const phoneLandline = normalizeTextIdentifier(readCellRaw(infoSheet, 'D21'));
-  const gsmResult = normalizeBelgianGsm(readCellRaw(infoSheet, 'G21'));
+
+  // Lecture tolérante aux cellules fusionnées (D20/D21 pour le fixe, G20/G21/F21/H21 pour le GSM)
+  const rawLandline =
+    readCellRaw(infoSheet, 'D21') ??
+    readCellRaw(infoSheet, 'D20') ??
+    readCellRaw(infoSheet, 'E21');
+  const rawGsm =
+    readCellRaw(infoSheet, 'G21') ??
+    readCellRaw(infoSheet, 'G20') ??
+    readCellRaw(infoSheet, 'F21') ??
+    readCellRaw(infoSheet, 'H21');
+
+  let phoneLandline = normalizeTextIdentifier(rawLandline);
+  let gsmResult = normalizeBelgianGsm(rawGsm);
+
+  // Si l'utilisateur a inscrit son numéro GSM dans la case Téléphone fixe (D21) et laissé G21 vide,
+  // on normalise le 0 initial et on le renseigne également dans GSM pour qu'il s'affiche partout.
+  if (!gsmResult.formatted && phoneLandline) {
+    const fallbackGsm = normalizeBelgianGsm(rawLandline);
+    if (
+      fallbackGsm.formatted &&
+      (/^04\d{8}$/.test(fallbackGsm.formatted.replace(/[\s./-]/g, '')) ||
+        fallbackGsm.zeroRestored)
+    ) {
+      gsmResult = fallbackGsm;
+      phoneLandline = fallbackGsm.formatted;
+    }
+  }
   const email = readCellText(infoSheet, 'D23') || 'cmn.inconnu@lifras.be';
   const febrasNumber = normalizeTextIdentifier(readCellRaw(infoSheet, 'D27'));
 
