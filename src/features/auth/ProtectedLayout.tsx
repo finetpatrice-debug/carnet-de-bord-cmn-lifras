@@ -259,25 +259,28 @@ export function ProtectedLayout(): React.ReactElement {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col pb-16 md:pb-0">
       {/* Barre supérieure principale : compacte et plein-écran sur Mobile (< md), complète et inchangée sur PC (md+) */}
-      <header className="sticky top-0 z-30 border-b border-slate-200 bg-slate-900 text-white shadow-sm">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-3 py-2 sm:px-6 md:py-3">
-          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+      <header className="sticky top-0 z-30 border-b border-slate-800 bg-slate-900 text-white shadow-sm">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-1.5 px-2.5 py-2 sm:gap-2 sm:px-6 md:py-3">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0 shrink">
             <img
               src="/logo-lifras.jpg"
               alt="Logo Officiel LIFRAS"
-              className="h-9 w-9 md:h-11 md:w-11 shrink-0 rounded-full border border-sky-400/50 bg-white object-cover shadow"
+              className="h-8 w-8 sm:h-9 sm:w-9 md:h-11 md:w-11 shrink-0 rounded-full border border-sky-400/50 bg-white object-cover shadow"
             />
             <div className="min-w-0">
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                <span className="truncate text-sm md:text-base font-bold tracking-tight text-white">
-                  Carnet de Bord Digital CMN
+              <div className="flex items-center gap-1 sm:gap-2">
+                <span className="truncate text-xs sm:text-sm md:text-base font-bold tracking-tight text-white">
+                  <span className="sm:hidden">CMN</span>
+                  <span className="hidden sm:inline">
+                    Carnet de Bord Digital CMN
+                  </span>
                 </span>
                 <Badge className="hidden sm:inline-flex bg-sky-500/20 text-sky-300 border-sky-400/30">
                   LIFRAS
                 </Badge>
                 <Badge
                   variant="outline"
-                  className="border-emerald-400/50 bg-emerald-500/20 font-mono text-[10px] md:text-[11px] text-emerald-200"
+                  className="shrink-0 border-emerald-400/50 bg-emerald-500/20 px-1.5 py-0 font-mono text-[9px] sm:text-[10px] md:text-[11px] text-emerald-200"
                 >
                   {APP_VERSION}
                 </Badge>
@@ -289,7 +292,7 @@ export function ProtectedLayout(): React.ReactElement {
           </div>
 
           {/* Contrôles de droite */}
-          <div className="flex items-center gap-1.5 sm:gap-2.5">
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
             {outboxCount > 0 && (
               <button
                 type="button"
@@ -307,7 +310,7 @@ export function ProtectedLayout(): React.ReactElement {
             )}
 
             <div
-              className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium ${
+              className={`hidden sm:flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium ${
                 isOnline
                   ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
                   : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
@@ -463,17 +466,17 @@ export function ProtectedLayout(): React.ReactElement {
                 aria-label="Changer de rôle (Mode Démo)"
                 value={profile.role}
                 onChange={(e) => switchDemoRole(e.target.value as UserRole)}
-                className="max-w-[115px] sm:max-w-none rounded-md border border-slate-700 bg-slate-800 px-2 py-1 text-[11px] sm:text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                className="max-w-[88px] sm:max-w-none rounded-md border border-slate-700 bg-slate-800 px-1.5 sm:px-2 py-1 text-[10px] sm:text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
               >
                 {ALL_ROLES.map((r) => (
                   <option key={r} value={r}>
-                    Vue : {USER_ROLE_LABELS[r]}
+                    {USER_ROLE_LABELS[r]}
                   </option>
                 ))}
               </select>
             )}
 
-            <div className="flex items-center gap-2">
+            <div className="hidden sm:flex items-center gap-2">
               {profile.photo_storage_path ? (
                 <img
                   src={profile.photo_storage_path}
