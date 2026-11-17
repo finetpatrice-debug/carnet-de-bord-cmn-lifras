@@ -23,4 +23,74 @@
     --ring: 199 89% 40%;
     --radius: 0.65rem;
   }
+
+  html.dark {
+    --background: 222.2 47.4% 7%;
+    --foreground: 210 40% 96%;
+    --card: 222.2 47.4% 10%;
+    --card-foreground: 210 40% 96%;
+    --primary: 199 89% 48%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 217.2 32.6% 16%;
+    --secondary-foreground: 210 40% 96%;
+    --muted: 217.2 32.6% 15%;
+    --muted-foreground: 215 20.2% 70%;
+    --accent: 217.2 32.6% 17%;
+    --accent-foreground: 210 40% 96%;
+    --destructive: 0 62.8% 45%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 20%;
+    --input: 217.2 32.6% 20%;
+    --ring: 199 89% 48%;
+    color-scheme: dark;
+  }
+}
+
+/* Adaptation automatique et harmonieuse du Mode Nuit sur l'ensemble des cartes et tableaux */
+html.dark body,
+html.dark .bg-slate-50 {
+  background-color: #0b1120 !important;
+  color: #f1f5f9 !important;
+}
+
+html.dark .bg-white,
+html.dark .bg-white\/95,
+html.dark .bg-slate-50\/70,
+html.dark .bg-slate-50\/80 {
+  background-color: #111827 !important;
+  color: #f1f5f9 !important;
+}
+
+html.dark .bg-slate-100 {
+  background-color: #1e293b !important;
+  color: #e2e8f0 !important;
+}
+
+html.dark .text-slate-900,
+html.dark .text-slate-800 {
+  color: #f8fafc !important;
+}
+
+html.dark .text-slate-700,
+html.dark .text-slate-600 {
+  color: #cbd5e1 !important;
+}
+
+html.dark .text-slate-500 {
+  color: #94a3b8 !important;
+}
+
+html.dark .border-slate-200,
+html.dark .border-slate-300,
+html.dark .border-slate-100,
+html.dark .divide-slate-200 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #1e293b !important;
+}
+
+html.dark input,
+html.dark select,
+html.dark textarea {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+  border-color: #334155 !important;
 }

@@ -43,6 +43,8 @@ import {
   Maximize2,
   Minimize2,
   Bell,
+  Sun,
+  Moon,
 } from 'lucide-react';
 
 interface NavItem {
@@ -109,6 +111,31 @@ export function ProtectedLayout(): React.ReactElement {
   const [notifications, setNotifications] = useState<AppNotificationItem[]>(() =>
     getStoredNotifications()
   );
+
+  // Confort visuel : Taille des caractères (85% à 130%) & Mode Jour / Nuit
+  const [fontScale, setFontScale] = useState<number>(() => {
+    const saved = localStorage.getItem('cmn_lifras_font_scale');
+    const parsed = saved ? Number.parseInt(saved, 10) : 100;
+    return Number.isNaN(parsed) ? 100 : Math.min(130, Math.max(85, parsed));
+  });
+
+  const [isNightMode, setIsNightMode] = useState<boolean>(() => {
+    return localStorage.getItem('cmn_lifras_theme_mode') === 'dark';
+  });
+
+  useEffect(() => {
+    document.documentElement.style.fontSize = `${fontScale}%`;
+    localStorage.setItem('cmn_lifras_font_scale', String(fontScale));
+  }, [fontScale]);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', isNightMode);
+    localStorage.setItem('cmn_lifras_theme_mode', isNightMode ? 'dark' : 'light');
+  }, [isNightMode]);
+
+  const adjustFontSize = (delta: number): void => {
+    setFontScale((prev) => Math.min(130, Math.max(85, prev + delta)));
+  };
 
   const outboxCount =
     useLiveQuery(
@@ -299,6 +326,58 @@ export function ProtectedLayout(): React.ReactElement {
                   <span className="hidden sm:inline">Hors-ligne</span>
                 </>
               )}
+            </div>
+
+            {/* Barre discrète de confort visuel : Taille du texte (A- / A+) & Mode Jour / Nuit */}
+            <div
+              role="group"
+              aria-label="Confort visuel : taille du texte et thème jour/nuit"
+              className="flex items-center rounded-lg border border-slate-700 bg-slate-800/90 p-0.5 text-slate-200"
+            >
+              <button
+                type="button"
+                onClick={() => adjustFontSize(-8)}
+                disabled={fontScale <= 85}
+                title="Diminuer la taille des caractères (A-)"
+                className="flex h-7 px-1.5 items-center justify-center rounded text-[11px] font-bold hover:bg-slate-700 disabled:opacity-40"
+              >
+                A-
+              </button>
+              <button
+                type="button"
+                onClick={() => setFontScale(100)}
+                title={`Taille actuelle : ${fontScale}% (Toucher pour réinitialiser à 100%)`}
+                className="hidden sm:flex h-7 px-1 items-center justify-center font-mono text-[10px] text-sky-300 hover:bg-slate-700"
+              >
+                {fontScale}%
+              </button>
+              <button
+                type="button"
+                onClick={() => adjustFontSize(8)}
+                disabled={fontScale >= 130}
+                title="Agrandir la taille des caractères (A+)"
+                className="flex h-7 px-1.5 items-center justify-center rounded text-xs font-extrabold hover:bg-slate-700 disabled:opacity-40"
+              >
+                A+
+              </button>
+              <div className="mx-0.5 h-4 w-[1px] bg-slate-700" />
+              <button
+                type="button"
+                onClick={() => setIsNightMode((prev) => !prev)}
+                title={
+                  isNightMode
+                    ? 'Passer en Mode Jour (Clair)'
+                    : 'Passer en Mode Nuit (Sombre)'
+                }
+                aria-label="Basculer entre le mode jour et le mode nuit"
+                className="flex h-7 w-7 items-center justify-center rounded text-amber-300 hover:bg-slate-700"
+              >
+                {isNightMode ? (
+                  <Sun className="h-3.5 w-3.5 text-amber-300" />
+                ) : (
+                  <Moon className="h-3.5 w-3.5 text-sky-300" />
+                )}
+              </button>
             </div>
 
             {/* Bouton Plein Écran (dédié au confort sur smartphone / tablette) */}
