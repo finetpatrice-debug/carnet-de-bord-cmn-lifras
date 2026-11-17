@@ -1083,7 +1083,8 @@ export function AdminPage(): React.ReactElement {
                     </div>
                   </div>
                   <div className="mt-1 text-xs text-slate-500">
-                    {mn.email} • GSM : {mn.phone_gsm} • {mn.club_name}
+                    {mn.email} • GSM : {mn.phone_gsm ?? '—'} • Fixe :{' '}
+                    {mn.phone_landline ?? '—'} • {mn.club_name ?? '—'}
                   </div>
 
                   <div className="mt-3 flex flex-wrap gap-1.5">

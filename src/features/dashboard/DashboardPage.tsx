@@ -380,6 +380,18 @@ export function DashboardPage(): React.ReactElement {
                 </span>
                 <span>•</span>
                 <span>
+                  GSM : <strong>{activeCandidate.phone_gsm ?? '—'}</strong>
+                </span>
+                {activeCandidate.phone_landline && (
+                  <>
+                    <span>•</span>
+                    <span>
+                      Fixe : <strong>{activeCandidate.phone_landline}</strong>
+                    </span>
+                  </>
+                )}
+                <span>•</span>
+                <span>
                   Plongées : <strong>{activeCandidate.dives_count ?? 0}</strong>
                 </span>
                 <span>•</span>
