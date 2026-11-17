@@ -15,7 +15,9 @@ export default defineConfig({
         description: 'Suivi et évaluation des Candidats Moniteurs Nationaux (LIFRAS)',
         theme_color: '#0f172a',
         background_color: '#f8fafc',
-        display: 'standalone',
+        display: 'fullscreen',
+        display_override: ['fullscreen', 'standalone'],
+        orientation: 'portrait',
         lang: 'fr',
         icons: [
           {

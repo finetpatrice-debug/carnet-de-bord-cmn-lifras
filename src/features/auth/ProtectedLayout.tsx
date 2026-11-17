@@ -8,6 +8,13 @@ import {
   offlineDb,
   syncLocalReferentialsCache,
 } from '@/services/offlineQueue';
+import {
+  getStoredNotifications,
+  markAllNotificationsRead,
+  pushAppNotification,
+  requestBrowserNotificationPermission,
+  type AppNotificationItem,
+} from '@/services/notificationService';
 import type { UserRole } from '@/domain/types';
 import { USER_ROLE_LABELS } from '@/domain/types';
 import { APP_VERSION } from '@/domain/referentials';
@@ -33,11 +40,15 @@ import {
   Copy,
   Check,
   X,
+  Maximize2,
+  Minimize2,
+  Bell,
 } from 'lucide-react';
 
 interface NavItem {
   to: string;
   label: string;
+  shortMobileLabel: string;
   icon: React.ComponentType<{ className?: string }>;
   allowedRoles: UserRole[];
 }
@@ -46,24 +57,28 @@ const NAV_ITEMS: NavItem[] = [
   {
     to: '/tableau-de-bord',
     label: 'Tableau de Bord',
+    shortMobileLabel: 'Tableau',
     icon: LayoutDashboard,
     allowedRoles: ['ADMIN_DTF', 'MN_EVALUATOR', 'PARRAIN_MN', 'CMN_CANDIDATE'],
   },
   {
     to: '/evaluations',
     label: 'Évaluation Terrain',
+    shortMobileLabel: 'Évaluer',
     icon: ClipboardCheck,
     allowedRoles: ['ADMIN_DTF', 'MN_EVALUATOR'],
   },
   {
     to: '/import-excel',
     label: 'Import Iso-Excel',
+    shortMobileLabel: 'Import',
     icon: FileSpreadsheet,
     allowedRoles: ['ADMIN_DTF'],
   },
   {
     to: '/administration',
     label: 'Administration & Audit',
+    shortMobileLabel: 'Admin',
     icon: Shield,
     allowedRoles: ['ADMIN_DTF'],
   },
@@ -89,6 +104,11 @@ export function ProtectedLayout(): React.ReactElement {
   const [isFlushing, setIsFlushing] = useState<boolean>(false);
   const [showQrModal, setShowQrModal] = useState<boolean>(false);
   const [copiedUrl, setCopiedUrl] = useState<boolean>(false);
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+  const [showNotifPanel, setShowNotifPanel] = useState<boolean>(false);
+  const [notifications, setNotifications] = useState<AppNotificationItem[]>(() =>
+    getStoredNotifications()
+  );
 
   const outboxCount =
     useLiveQuery(
@@ -101,23 +121,76 @@ export function ProtectedLayout(): React.ReactElement {
     void syncLocalReferentialsCache(candidates, mnDirectory);
   }, [candidates, mnDirectory]);
 
+  // Synchronisation automatique en arrière-plan (Background Sync : online + visibilitychange + intervalle 30s)
   useEffect(() => {
-    const handleOnline = (): void => {
-      setIsOnline(true);
+    const triggerBackgroundSync = (): void => {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) return;
       setIsFlushing(true);
       void flushOutboxEvaluations(recordFieldEvaluation).finally(() => {
         setIsFlushing(false);
       });
     };
+
+    const handleOnline = (): void => {
+      setIsOnline(true);
+      triggerBackgroundSync();
+    };
     const handleOffline = (): void => setIsOnline(false);
+    const handleVisibility = (): void => {
+      if (document.visibilityState === 'visible') {
+        triggerBackgroundSync();
+      }
+    };
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    const intervalId = window.setInterval(triggerBackgroundSync, 30000);
+
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.clearInterval(intervalId);
     };
   }, [recordFieldEvaluation]);
+
+  // Écoute des notifications Push / locales et de l'état plein écran
+  useEffect(() => {
+    const refreshNotifs = (): void => setNotifications(getStoredNotifications());
+    const handleFsChange = (): void =>
+      setIsFullscreen(Boolean(document.fullscreenElement));
+
+    window.addEventListener('cmn-notification-added', refreshNotifs);
+    document.addEventListener('fullscreenchange', handleFsChange);
+    return () => {
+      window.removeEventListener('cmn-notification-added', refreshNotifs);
+      document.removeEventListener('fullscreenchange', handleFsChange);
+    };
+  }, []);
+
+  const toggleFullscreen = async (): Promise<void> => {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+      } else if (document.exitFullscreen) {
+        await document.exitFullscreen();
+      }
+    } catch {
+      // Ignorer si non supporté par le navigateur iOS Safari
+    }
+  };
+
+  const handleEnablePushNotifications = async (): Promise<void> => {
+    const perm = await requestBrowserNotificationPermission();
+    if (perm === 'granted') {
+      pushAppNotification(
+        'Notifications LIFRAS activées',
+        'Vous serez alerté instantanément à chaque nouvelle évaluation ou synchronisation.'
+      );
+    }
+  };
 
   const handleManualFlush = async (): Promise<void> => {
     setIsFlushing(true);
@@ -136,6 +209,8 @@ export function ProtectedLayout(): React.ReactElement {
     item.allowedRoles.includes(profile.role)
   );
 
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
   const handleLogout = async (): Promise<void> => {
     await signOut();
     navigate('/connexion');
@@ -147,7 +222,7 @@ export function ProtectedLayout(): React.ReactElement {
       setCopiedUrl(true);
       setTimeout(() => setCopiedUrl(false), 2000);
     } catch {
-      // Ignorer si presse-papier indisponible
+      // Ignorer
     }
   };
 
@@ -156,72 +231,152 @@ export function ProtectedLayout(): React.ReactElement {
   )}`;
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col">
-      {/* Barre supérieure principale */}
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col pb-16 md:pb-0">
+      {/* Barre supérieure principale : compacte et plein-écran sur Mobile (< md), complète et inchangée sur PC (md+) */}
       <header className="sticky top-0 z-30 border-b border-slate-200 bg-slate-900 text-white shadow-sm">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-3 sm:px-6">
-          <div className="flex items-center gap-3">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-3 py-2 sm:px-6 md:py-3">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
             <img
               src="/logo-lifras.jpg"
               alt="Logo Officiel LIFRAS"
-              className="h-11 w-11 shrink-0 rounded-full border border-sky-400/50 bg-white object-cover shadow"
+              className="h-9 w-9 md:h-11 md:w-11 shrink-0 rounded-full border border-sky-400/50 bg-white object-cover shadow"
             />
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-bold tracking-tight text-white">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <span className="truncate text-sm md:text-base font-bold tracking-tight text-white">
                   Carnet de Bord Digital CMN
                 </span>
-                <Badge className="bg-sky-500/20 text-sky-300 border-sky-400/30">
+                <Badge className="hidden sm:inline-flex bg-sky-500/20 text-sky-300 border-sky-400/30">
                   LIFRAS
                 </Badge>
                 <Badge
                   variant="outline"
-                  className="border-emerald-400/50 bg-emerald-500/20 font-mono text-[11px] text-emerald-200"
+                  className="border-emerald-400/50 bg-emerald-500/20 font-mono text-[10px] md:text-[11px] text-emerald-200"
                 >
                   {APP_VERSION}
                 </Badge>
               </div>
-              <p className="text-xs text-slate-300">
+              <p className="hidden md:block text-xs text-slate-300">
                 Cursus Candidats Moniteurs Nationaux • Mode ISO-EXCEL
               </p>
             </div>
           </div>
 
-          {/* État réseau PWA + Badge Outbox IndexedDB + Utilisateur connecté */}
-          <div className="flex flex-wrap items-center gap-2.5">
+          {/* Contrôles de droite */}
+          <div className="flex items-center gap-1.5 sm:gap-2.5">
             {outboxCount > 0 && (
               <button
                 type="button"
                 onClick={() => void handleManualFlush()}
                 disabled={isFlushing}
-                title="Cliquez pour synchroniser immédiatement la boîte d'envoi IndexedDB vers Supabase"
-                className="flex items-center gap-1.5 rounded-full border border-amber-400/50 bg-amber-500/25 px-3 py-1 text-xs font-bold text-amber-200 transition hover:bg-amber-500/40"
+                title="Synchronisation automatique en arrière-plan active — Cliquez pour forcer maintenant"
+                className="flex items-center gap-1 rounded-full border border-amber-400/50 bg-amber-500/25 px-2.5 py-1 text-[11px] font-bold text-amber-200 transition hover:bg-amber-500/40"
               >
                 <RefreshCw
                   className={`h-3.5 w-3.5 ${isFlushing ? 'animate-spin' : ''}`}
                 />
-                <span>En attente de réseau ({outboxCount})</span>
+                <span className="hidden sm:inline">En attente de réseau</span>
+                <span>({outboxCount})</span>
               </button>
             )}
 
             <div
-              className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${
+              className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium ${
                 isOnline
                   ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
                   : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
               }`}
-              title="État de synchronisation PWA / IndexedDB (Dexie)"
+              title="Synchronisation arrière-plan PWA / IndexedDB (Dexie)"
             >
               {isOnline ? (
                 <>
                   <Wifi className="h-3.5 w-3.5" />
-                  <span>En ligne</span>
+                  <span className="hidden sm:inline">En ligne</span>
                 </>
               ) : (
                 <>
                   <WifiOff className="h-3.5 w-3.5" />
-                  <span>Hors-ligne</span>
+                  <span className="hidden sm:inline">Hors-ligne</span>
                 </>
+              )}
+            </div>
+
+            {/* Bouton Plein Écran (dédié au confort sur smartphone / tablette) */}
+            <button
+              type="button"
+              onClick={() => void toggleFullscreen()}
+              title={
+                isFullscreen ? 'Quitter le plein écran' : 'Passer en plein écran'
+              }
+              className="flex md:hidden h-8 w-8 items-center justify-center rounded-lg border border-slate-700 bg-slate-800 text-sky-300 hover:bg-slate-700"
+            >
+              {isFullscreen ? (
+                <Minimize2 className="h-4 w-4" />
+              ) : (
+                <Maximize2 className="h-4 w-4" />
+              )}
+            </button>
+
+            {/* Cloche de Notifications Push / Alertes évaluations */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowNotifPanel((prev) => !prev);
+                  if (!showNotifPanel && unreadCount > 0) {
+                    setNotifications(markAllNotificationsRead());
+                  }
+                }}
+                title="Notifications & Alertes d'évaluations"
+                className="relative flex h-8 w-8 items-center justify-center rounded-lg border border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700"
+              >
+                <Bell className="h-4 w-4" />
+                {unreadCount > 0 && (
+                  <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                    {unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {showNotifPanel && (
+                <div className="absolute right-0 mt-2 w-80 rounded-xl border border-slate-200 bg-white p-3 text-slate-900 shadow-2xl z-50">
+                  <div className="flex items-center justify-between border-b pb-2">
+                    <span className="text-xs font-bold text-slate-900">
+                      Notifications & Sync Arrière-Plan
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => void handleEnablePushNotifications()}
+                      className="rounded bg-sky-100 px-2 py-0.5 text-[10px] font-semibold text-sky-800 hover:bg-sky-200"
+                    >
+                      Activer Push Mobile
+                    </button>
+                  </div>
+                  <div className="mt-2 max-h-60 space-y-2 overflow-y-auto text-xs">
+                    {notifications.length === 0 ? (
+                      <p className="py-4 text-center text-slate-400">
+                        Aucune notification récente.
+                      </p>
+                    ) : (
+                      notifications.map((n) => (
+                        <div
+                          key={n.id}
+                          className="rounded-lg border border-slate-100 bg-slate-50 p-2"
+                        >
+                          <div className="font-semibold text-slate-900">
+                            {n.title}
+                          </div>
+                          <div className="text-[11px] text-slate-600">
+                            {n.body}
+                          </div>
+                          <div className="mt-1 text-[10px] text-slate-400">
+                            {new Date(n.createdAt).toLocaleString('fr-BE')}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
               )}
             </div>
 
@@ -230,7 +385,7 @@ export function ProtectedLayout(): React.ReactElement {
                 aria-label="Changer de rôle (Mode Démo)"
                 value={profile.role}
                 onChange={(e) => switchDemoRole(e.target.value as UserRole)}
-                className="rounded-md border border-slate-700 bg-slate-800 px-2.5 py-1.5 text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                className="max-w-[115px] sm:max-w-none rounded-md border border-slate-700 bg-slate-800 px-2 py-1 text-[11px] sm:text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
               >
                 {ALL_ROLES.map((r) => (
                   <option key={r} value={r}>
@@ -252,7 +407,7 @@ export function ProtectedLayout(): React.ReactElement {
                   {`${profile.first_name.charAt(0)}${profile.last_name.charAt(0)}`.toUpperCase()}
                 </div>
               )}
-              <div className="hidden sm:block text-right">
+              <div className="hidden lg:block text-right">
                 <div className="text-xs font-semibold text-white">
                   {profile.first_name} {profile.last_name}
                 </div>
@@ -267,7 +422,7 @@ export function ProtectedLayout(): React.ReactElement {
               variant="ghost"
               size="sm"
               onClick={handleLogout}
-              className="text-slate-200 hover:bg-slate-800 hover:text-white"
+              className="px-2 sm:px-3 text-slate-200 hover:bg-slate-800 hover:text-white"
             >
               <LogOut className="h-4 w-4" />
               <span className="sr-only sm:not-sr-only">Déconnexion</span>
@@ -275,8 +430,8 @@ export function ProtectedLayout(): React.ReactElement {
           </div>
         </div>
 
-        {/* Navigation filtrée par rôle + Bouton QR Code à droite de Administration & Audit (visible par tous les profils) */}
-        <nav className="border-t border-slate-800 bg-slate-950/60">
+        {/* Navigation PC (inchangée sur écran PC md+, masquée sur smartphone où elle devient une barre basse native) */}
+        <nav className="hidden md:block border-t border-slate-800 bg-slate-950/60">
           <div className="mx-auto flex max-w-7xl items-center gap-1 overflow-x-auto px-4 py-1.5 sm:px-6">
             {visibleNavItems.map((item) => {
               const Icon = item.icon;
@@ -298,7 +453,6 @@ export function ProtectedLayout(): React.ReactElement {
               );
             })}
 
-            {/* Bouton QR Code placé immédiatement à droite des onglets de navigation et accessible à tous les profils */}
             <button
               type="button"
               onClick={() => setShowQrModal(true)}
@@ -387,12 +541,47 @@ export function ProtectedLayout(): React.ReactElement {
       )}
 
       {/* Contenu principal */}
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6">
+      <main className="mx-auto w-full max-w-7xl flex-1 px-3 py-4 sm:px-6 md:py-6">
         <Outlet />
       </main>
 
-      {/* Pied de page réglementaire */}
-      <footer className="border-t border-slate-200 bg-white py-4 text-center text-xs text-slate-500">
+      {/* Barre de navigation basse dédiée au Mobile (< md) utilisable au pouce en plein écran */}
+      <nav
+        aria-label="Navigation mobile"
+        className="fixed bottom-0 left-0 right-0 z-40 flex md:hidden items-center justify-around border-t border-slate-800 bg-slate-900/95 px-1 py-1.5 text-white shadow-2xl backdrop-blur"
+      >
+        {visibleNavItems.map((item) => {
+          const Icon = item.icon;
+          return (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              className={({ isActive }) =>
+                `flex flex-1 flex-col items-center justify-center gap-0.5 rounded-lg py-1 text-[10px] font-semibold transition ${
+                  isActive
+                    ? 'bg-sky-600 text-white shadow'
+                    : 'text-slate-300 hover:text-white'
+                }`
+              }
+            >
+              <Icon className="h-4 w-4" />
+              <span>{item.shortMobileLabel}</span>
+            </NavLink>
+          );
+        })}
+
+        <button
+          type="button"
+          onClick={() => setShowQrModal(true)}
+          className="flex flex-1 flex-col items-center justify-center gap-0.5 rounded-lg py-1 text-[10px] font-semibold text-sky-300 hover:text-white"
+        >
+          <QrCode className="h-4 w-4" />
+          <span>QR Code</span>
+        </button>
+      </nav>
+
+      {/* Pied de page réglementaire (PC) */}
+      <footer className="hidden md:block border-t border-slate-200 bg-white py-4 text-center text-xs text-slate-500">
         Commission de l’Enseignement LIFRAS — Carnet de Bord Digital CMN ({APP_VERSION}) •
         Moteur certifié Iso-Excel (`src/domain/scoringEngine.ts`) • RLS 100 % activé
       </footer>

@@ -12,11 +12,23 @@ function escapeHtml(value: string | number | null | undefined): string {
     .replace(/"/g, '&quot;');
 }
 
+export type PdfReportAudience =
+  | 'COLLEGE_NATIONAL'
+  | 'CANDIDAT_CMN'
+  | 'PARRAIN_MN';
+
+export const PDF_AUDIENCE_LABELS: Record<PdfReportAudience, string> = {
+  COLLEGE_NATIONAL: 'Dossier Complet — Collège National & DTF',
+  PARRAIN_MN: 'Bilan d’Accompagnement — Parrain & Moniteurs MN',
+  CANDIDAT_CMN: 'Bilan Pédagogique Individuel — Candidat CMN',
+};
+
 export interface OfficialDeliberationReportPayload {
   candidate: Profile;
   scoreboard: CandidateScoreboardResult;
   evaluations: Evaluation[];
   evaluatorMatrix: EvaluatorCrossMatrix;
+  audience?: PdfReportAudience;
 }
 
 /**
@@ -26,7 +38,14 @@ export interface OfficialDeliberationReportPayload {
 export function buildOfficialPdfReportHtml(
   payload: OfficialDeliberationReportPayload
 ): string {
-  const { candidate, scoreboard, evaluations, evaluatorMatrix } = payload;
+  const {
+    candidate,
+    scoreboard,
+    evaluations,
+    evaluatorMatrix,
+    audience = 'COLLEGE_NATIONAL',
+  } = payload;
+  const audienceTitle = PDF_AUDIENCE_LABELS[audience];
   const generatedAt = new Date().toLocaleString('fr-BE', {
     dateStyle: 'full',
     timeStyle: 'short',
@@ -146,7 +165,7 @@ export function buildOfficialPdfReportHtml(
   <div class="header">
     <div>
       <div class="badge">LIFRAS — COMMISSION DE L'ENSEIGNEMENT</div>
-      <h1 class="title">Dossier Officiel de Délibération — Candidat Moniteur National</h1>
+      <h1 class="title">${escapeHtml(audienceTitle)}</h1>
       <div class="subtitle">Rapport certifié par le moteur mathématique Iso-Excel • Généré le ${escapeHtml(generatedAt)}</div>
     </div>
     <div style="text-align:right;">
@@ -206,7 +225,10 @@ export function buildOfficialPdfReportHtml(
 
   <div class="page-break"></div>
 
-  <h2>4. Matrice Croisée de Diversité des Jurys (Moniteurs Nationaux × Épreuves)</h2>
+  ${
+    audience === 'CANDIDAT_CMN'
+      ? ''
+      : `<h2>4. Matrice Croisée de Diversité des Jurys (Moniteurs Nationaux × Épreuves)</h2>
   <table>
     <thead>
       <tr>
@@ -218,9 +240,10 @@ export function buildOfficialPdfReportHtml(
     <tbody>
       ${matrixRowsHtml}
     </tbody>
-  </table>
+  </table>`
+  }
 
-  <h2>5. Journal Intégral des Commentaires Pédagogiques (${nonEmptyComments.length} prestations)</h2>
+  <h2>${audience === 'CANDIDAT_CMN' ? '4' : '5'}. Journal Intégral des Commentaires Pédagogiques (${nonEmptyComments.length} prestations)</h2>
   <table>
     <thead>
       <tr>

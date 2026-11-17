@@ -34,7 +34,11 @@ import {
   buildPillarChronologicalSeries,
   getPillarStatusVisuals,
 } from './dashboardAnalytics';
-import { triggerOfficialPdfExport } from './pdfDeliberationExporter';
+import {
+  PDF_AUDIENCE_LABELS,
+  triggerOfficialPdfExport,
+  type PdfReportAudience,
+} from './pdfDeliberationExporter';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -185,6 +189,8 @@ export function DashboardPage(): React.ReactElement {
   const [commentEvaluatorFilter, setCommentEvaluatorFilter] =
     useState<string>('ALL');
   const [commentSearchQuery, setCommentSearchQuery] = useState<string>('');
+  const [pdfAudience, setPdfAudience] =
+    useState<PdfReportAudience>('COLLEGE_NATIONAL');
 
   const activeCandidate: Profile = useMemo(
     () =>
@@ -327,6 +333,7 @@ export function DashboardPage(): React.ReactElement {
       scoreboard,
       evaluations: candidateEvaluations,
       evaluatorMatrix,
+      audience: pdfAudience,
     });
   };
 
@@ -404,13 +411,30 @@ export function DashboardPage(): React.ReactElement {
               </select>
             )}
 
+            <select
+              aria-label="Destinataire du Bilan Officiel PDF"
+              value={pdfAudience}
+              onChange={(e) =>
+                setPdfAudience(e.target.value as PdfReportAudience)
+              }
+              className="h-9 rounded-lg border border-slate-300 bg-slate-50 px-2.5 text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500"
+            >
+              {(Object.keys(PDF_AUDIENCE_LABELS) as PdfReportAudience[]).map(
+                (aud) => (
+                  <option key={aud} value={aud}>
+                    {PDF_AUDIENCE_LABELS[aud]}
+                  </option>
+                )
+              )}
+            </select>
+
             <Button
               type="button"
               onClick={handleExportPdf}
               className="bg-slate-900 text-white hover:bg-slate-800"
             >
               <FileDown className="h-4 w-4 text-sky-400" />
-              Exporter le Dossier Officiel PDF
+              Exporter le Bilan PDF
             </Button>
           </div>
         </div>

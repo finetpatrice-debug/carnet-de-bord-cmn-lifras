@@ -374,7 +374,7 @@ export function EvaluationPage(): React.ReactElement {
   return (
     <div className="mx-auto max-w-3xl space-y-5 pb-12">
       {/* Barre de progression collante Mobile-First en haut d'écran */}
-      <div className="sticky top-[104px] z-20 rounded-xl border border-slate-200 bg-white/95 p-3.5 shadow-md backdrop-blur">
+      <div className="sticky top-[54px] md:top-[104px] z-20 rounded-xl border border-slate-200 bg-white/95 p-3.5 shadow-md backdrop-blur">
         <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
           <div className="flex items-center gap-2 font-semibold text-slate-900">
             <ClipboardCheck className="h-4 w-4 text-sky-600" />

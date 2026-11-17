@@ -9,6 +9,7 @@ import type {
 } from '@/domain/types';
 import { OFFICIAL_CRITERIA, OFFICIAL_EXAM_TYPES } from '@/domain/referentials';
 import { isSupabaseConfigured, supabase } from './supabaseClient';
+import { pushAppNotification } from './notificationService';
 
 export interface OutboxEvaluationItem {
   localId?: number;
@@ -197,6 +198,11 @@ export async function submitOrQueueEvaluation(
       scores: scoreEntities,
     });
 
+    pushAppNotification(
+      'Nouvelle évaluation publiée',
+      `Épreuve ${payload.exam_code} du ${payload.event_date} enregistrée (${payload.scores.length} critères).`
+    );
+
     return { mode: 'SYNCED' };
   } catch (err) {
     // En cas d'échec réseau ou serveur Supabase, mise en file d'attente IndexedDB garantie
@@ -295,6 +301,10 @@ export async function flushOutboxEvaluations(
       onItemSynced?.({ evaluation: evaluationEntity, scores: scoreEntities });
       await offlineDb.outbox_evaluations.delete(item.localId);
       syncedCount += 1;
+      pushAppNotification(
+        'Synchronisation hors-ligne terminée',
+        `L'évaluation ${item.exam_code} (${item.event_date}) a été synchronisée automatiquement en arrière-plan.`
+      );
     } catch (err) {
       await offlineDb.outbox_evaluations.update(item.localId, {
         sync_status: 'FAILED',
