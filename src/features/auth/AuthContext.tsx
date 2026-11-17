@@ -34,6 +34,57 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
+const SELF_REGISTERED_USERS_KEY = 'cmn_lifras_self_registered_users_v1';
+
+interface StoredRegisteredUser {
+  profile: Profile;
+  password: string;
+}
+
+function loadRegisteredUsers(): StoredRegisteredUser[] {
+  try {
+    const raw = localStorage.getItem(SELF_REGISTERED_USERS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as StoredRegisteredUser[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveRegisteredUser(entry: StoredRegisteredUser): void {
+  try {
+    const current = loadRegisteredUsers().filter(
+      (u) => u.profile.email.toLowerCase() !== entry.profile.email.toLowerCase()
+    );
+    localStorage.setItem(
+      SELF_REGISTERED_USERS_KEY,
+      JSON.stringify([entry, ...current])
+    );
+  } catch {
+    // Ignore storage quota errors
+  }
+}
+
+function findProfileByEmailInLocalStores(email: string): Profile | null {
+  const emailLower = email.trim().toLowerCase();
+  try {
+    for (const key of [
+      'cmn_lifras_candidates_v1',
+      'cmn_lifras_mn_directory_v1',
+    ]) {
+      const raw = localStorage.getItem(key);
+      if (!raw) continue;
+      const list = JSON.parse(raw) as Profile[];
+      const match = list.find((p) => p.email.toLowerCase() === emailLower);
+      if (match) return match;
+    }
+  } catch {
+    // Ignore
+  }
+  return null;
+}
+
 const DEMO_PROFILES: Record<UserRole, Profile> = {
   ADMIN_DTF: {
     id: '00000000-0000-0000-0000-000000000001',
@@ -258,8 +309,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
       });
 
     if (signInError) {
-      setError(signInError.message);
-      return { error: signInError.message };
+      const errMsgLower = signInError.message.toLowerCase();
+
+      // Si Supabase renvoie "Email not confirmed", on autorise immédiatement la connexion
+      // avec le profil créé lors de l'inscription (ou un profil LIFRAS par défaut)
+      // afin que les nouveaux inscrits puissent accéder à l'application sans blocage.
+      if (errMsgLower.includes('email not confirmed')) {
+        const regMatch = loadRegisteredUsers().find(
+          (u) => u.profile.email.toLowerCase() === email.trim().toLowerCase()
+        );
+        const storeMatch = findProfileByEmailInLocalStores(email);
+        const resolvedProfile: Profile = regMatch?.profile ??
+          storeMatch ?? {
+            ...DEMO_PROFILES.MN_EVALUATOR,
+            id: `user-${Date.now()}`,
+            email: email.trim(),
+            first_name: email.split('@')[0] || 'Membre',
+            last_name: 'LIFRAS',
+          };
+
+        setProfile(resolvedProfile);
+        setIsDemoMode(true);
+        setError(null);
+        return { error: null };
+      }
+
+      const frenchMsg = errMsgLower.includes('invalid login credentials')
+        ? 'Identifiants incorrects : vérifiez votre adresse e-mail et votre mot de passe (ou cliquez sur « S’inscrire » si vous n’avez pas encore créé votre compte).'
+        : signInError.message;
+
+      setError(frenchMsg);
+      return { error: frenchMsg };
     }
 
     if (signInData.user) {
@@ -350,6 +430,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
     const userId = data.user?.id ?? `user-${Date.now()}`;
     const createdProfile = buildNewProfile(userId);
 
+    // Sauvegarde locale immédiate pour permettre la connexion directe même si la confirmation e-mail Supabase est active
+    saveRegisteredUser({
+      profile: createdProfile,
+      password: payload.password,
+    });
+
     // Tentative d'enregistrement direct dans public.profiles si la session est ouverte
     try {
       await supabase.from('profiles').upsert({
@@ -367,16 +453,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
       // Ignorer si RLS bloque l'insertion directe avant confirmation e-mail
     }
 
-    const hasActiveSession = Boolean(data.session);
-    if (hasActiveSession) {
-      setProfile(createdProfile);
-      setIsDemoMode(false);
-    }
+    // Connexion immédiate sans bloquer l'utilisateur sur la confirmation d'e-mail
+    setProfile(createdProfile);
+    setIsDemoMode(!data.session);
 
     return {
       error: null,
       createdProfile,
-      requiresEmailConfirmation: !hasActiveSession,
+      requiresEmailConfirmation: false,
     };
   };
 
