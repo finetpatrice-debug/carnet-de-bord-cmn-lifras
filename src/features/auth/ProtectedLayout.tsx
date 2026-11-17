@@ -258,29 +258,26 @@ export function ProtectedLayout(): React.ReactElement {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col pb-16 md:pb-0">
-      {/* Barre supérieure principale : compacte et plein-écran sur Mobile (< md), complète et inchangée sur PC (md+) */}
+      {/* Barre supérieure principale : compacte et sans chevauchement sur Mobile (< md), complète sur PC (md+) */}
       <header className="sticky top-0 z-30 border-b border-slate-800 bg-slate-900 text-white shadow-sm">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-1.5 px-2.5 py-2 sm:gap-2 sm:px-6 md:py-3">
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0 shrink">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-3 py-2 sm:px-6 md:py-3">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <img
               src="/logo-lifras.jpg"
               alt="Logo Officiel LIFRAS"
               className="h-8 w-8 sm:h-9 sm:w-9 md:h-11 md:w-11 shrink-0 rounded-full border border-sky-400/50 bg-white object-cover shadow"
             />
-            <div className="min-w-0">
-              <div className="flex items-center gap-1 sm:gap-2">
-                <span className="truncate text-xs sm:text-sm md:text-base font-bold tracking-tight text-white">
-                  <span className="sm:hidden">CMN</span>
-                  <span className="hidden sm:inline">
-                    Carnet de Bord Digital CMN
-                  </span>
+            <div>
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <span className="hidden sm:inline text-sm md:text-base font-bold tracking-tight text-white">
+                  Carnet de Bord Digital CMN
                 </span>
                 <Badge className="hidden sm:inline-flex bg-sky-500/20 text-sky-300 border-sky-400/30">
                   LIFRAS
                 </Badge>
                 <Badge
                   variant="outline"
-                  className="shrink-0 border-emerald-400/50 bg-emerald-500/20 px-1.5 py-0 font-mono text-[9px] sm:text-[10px] md:text-[11px] text-emerald-200"
+                  className="shrink-0 whitespace-nowrap border-emerald-400/50 bg-emerald-500/20 px-1.5 py-0.5 font-mono text-[10px] md:text-[11px] text-emerald-200"
                 >
                   {APP_VERSION}
                 </Badge>
@@ -292,19 +289,19 @@ export function ProtectedLayout(): React.ReactElement {
           </div>
 
           {/* Contrôles de droite */}
-          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             {outboxCount > 0 && (
               <button
                 type="button"
                 onClick={() => void handleManualFlush()}
                 disabled={isFlushing}
                 title="Synchronisation automatique en arrière-plan active — Cliquez pour forcer maintenant"
-                className="flex items-center gap-1 rounded-full border border-amber-400/50 bg-amber-500/25 px-2.5 py-1 text-[11px] font-bold text-amber-200 transition hover:bg-amber-500/40"
+                className="flex shrink-0 items-center gap-1 rounded-full border border-amber-400/50 bg-amber-500/25 px-2 py-0.5 text-[10px] sm:text-[11px] font-bold text-amber-200 transition hover:bg-amber-500/40"
               >
                 <RefreshCw
-                  className={`h-3.5 w-3.5 ${isFlushing ? 'animate-spin' : ''}`}
+                  className={`h-3 w-3 sm:h-3.5 sm:w-3.5 ${isFlushing ? 'animate-spin' : ''}`}
                 />
-                <span className="hidden sm:inline">En attente de réseau</span>
+                <span className="hidden md:inline">En attente de réseau</span>
                 <span>({outboxCount})</span>
               </button>
             )}

@@ -124,49 +124,61 @@ export async function submitOrQueueEvaluation(
 
   try {
     if (isSupabaseConfigured) {
-      const { error: evalErr } = await supabase.from('evaluations').insert({
-        id: payload.id,
-        legacy_row_id: null,
-        candidate_id: payload.candidate_id,
-        exam_code: payload.exam_code,
-        lead_evaluator_id: payload.lead_evaluator_id,
-        legacy_evaluator_raw: payload.legacy_evaluator_raw,
-        event_date: payload.event_date,
-        started_at: payload.started_at,
-        submitted_at: payload.submitted_at,
-        improvements_comment: payload.improvements_comment,
-        strengths_comment: payload.strengths_comment,
-        status: 'PUBLISHED',
-      });
+      const isValidUuid = (val: string): boolean =>
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+          val
+        );
 
-      if (evalErr) {
-        throw new Error(evalErr.message);
-      }
+      if (
+        isValidUuid(payload.id) &&
+        isValidUuid(payload.candidate_id) &&
+        isValidUuid(payload.lead_evaluator_id)
+      ) {
+        const { error: evalErr } = await supabase.from('evaluations').insert({
+          id: payload.id,
+          legacy_row_id: null,
+          candidate_id: payload.candidate_id,
+          exam_code: payload.exam_code,
+          lead_evaluator_id: payload.lead_evaluator_id,
+          legacy_evaluator_raw: payload.legacy_evaluator_raw,
+          event_date: payload.event_date,
+          started_at: payload.started_at,
+          submitted_at: payload.submitted_at,
+          improvements_comment: payload.improvements_comment,
+          strengths_comment: payload.strengths_comment,
+          status: 'PUBLISHED',
+        });
 
-      if (payload.co_evaluator_ids.length > 0) {
-        const coRows = payload.co_evaluator_ids.map((coId) => ({
-          evaluation_id: payload.id,
-          evaluator_id: coId,
-        }));
-        const { error: coErr } = await supabase
-          .from('evaluation_evaluators')
-          .insert(coRows);
-        if (coErr) {
-          throw new Error(coErr.message);
+        if (evalErr) {
+          throw new Error(evalErr.message);
         }
-      }
 
-      const scoreRows: EvaluationScore[] = payload.scores.map((s) => ({
-        evaluation_id: payload.id,
-        criterion_id: s.criterion_id,
-        grade: s.grade,
-      }));
+        const validCoIds = payload.co_evaluator_ids.filter(isValidUuid);
+        if (validCoIds.length > 0) {
+          const coRows = validCoIds.map((coId) => ({
+            evaluation_id: payload.id,
+            evaluator_id: coId,
+          }));
+          const { error: coErr } = await supabase
+            .from('evaluation_evaluators')
+            .insert(coRows);
+          if (coErr) {
+            throw new Error(coErr.message);
+          }
+        }
 
-      const { error: scoresErr } = await supabase
-        .from('evaluation_scores')
-        .insert(scoreRows);
-      if (scoresErr) {
-        throw new Error(scoresErr.message);
+        const scoreRows: EvaluationScore[] = payload.scores.map((s) => ({
+          evaluation_id: payload.id,
+          criterion_id: s.criterion_id,
+          grade: s.grade,
+        }));
+
+        const { error: scoresErr } = await supabase
+          .from('evaluation_scores')
+          .insert(scoreRows);
+        if (scoresErr) {
+          throw new Error(scoresErr.message);
+        }
       }
     }
 
@@ -239,7 +251,17 @@ export async function flushOutboxEvaluations(
     });
 
     try {
-      if (isSupabaseConfigured) {
+      const isValidUuid = (val: string): boolean =>
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+          val
+        );
+
+      if (
+        isSupabaseConfigured &&
+        isValidUuid(item.id) &&
+        isValidUuid(item.candidate_id) &&
+        isValidUuid(item.lead_evaluator_id)
+      ) {
         const { error: evalErr } = await supabase.from('evaluations').insert({
           id: item.id,
           legacy_row_id: null,
@@ -257,9 +279,10 @@ export async function flushOutboxEvaluations(
 
         if (evalErr) throw new Error(evalErr.message);
 
-        if (item.co_evaluator_ids.length > 0) {
+        const validCoIds = item.co_evaluator_ids.filter(isValidUuid);
+        if (validCoIds.length > 0) {
           await supabase.from('evaluation_evaluators').insert(
-            item.co_evaluator_ids.map((coId) => ({
+            validCoIds.map((coId) => ({
               evaluation_id: item.id,
               evaluator_id: coId,
             }))
