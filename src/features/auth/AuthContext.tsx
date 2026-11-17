@@ -3,6 +3,17 @@ import type { Session, User } from '@supabase/supabase-js';
 import { isSupabaseConfigured, supabase } from '@/services/supabaseClient';
 import type { Profile, UserRole } from '@/domain/types';
 
+interface SignUpPayload {
+  email: string;
+  password: string;
+  first_name: string;
+  last_name: string;
+  role: UserRole;
+  febras_number: string;
+  phone_gsm: string;
+  club_name: string;
+}
+
 interface AuthContextValue {
   session: Session | null;
   user: User | null;
@@ -11,6 +22,12 @@ interface AuthContextValue {
   error: string | null;
   isDemoMode: boolean;
   signInWithPassword: (email: string, password: string) => Promise<{ error: string | null }>;
+  signUpNewUser: (payload: SignUpPayload) => Promise<{
+    error: string | null;
+    createdProfile: Profile | null;
+    requiresEmailConfirmation: boolean;
+  }>;
+  requestPasswordReset: (email: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   switchDemoRole: (role: UserRole) => void;
 }
@@ -111,7 +128,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
 
   const fetchProfile = async (
     userId: string,
-    userEmail?: string
+    userEmail?: string,
+    userMeta?: Record<string, unknown>
   ): Promise<void> => {
     const { data, error: profileError } = await supabase
       .from('profiles')
@@ -132,12 +150,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
       emailLower.includes('fune') ||
       emailLower.includes('dtf');
 
+    const metaRole =
+      typeof userMeta?.role === 'string' &&
+      (userMeta.role === 'ADMIN_DTF' ||
+        userMeta.role === 'MN_EVALUATOR' ||
+        userMeta.role === 'CMN_CANDIDATE')
+        ? (userMeta.role as UserRole)
+        : isMainAdmin
+          ? 'ADMIN_DTF'
+          : 'CMN_CANDIDATE';
+
     setProfile({
-      ...DEMO_PROFILES[isMainAdmin ? 'ADMIN_DTF' : 'CMN_CANDIDATE'],
+      ...DEMO_PROFILES[metaRole],
       id: userId,
-      last_name: isMainAdmin ? 'Finet' : 'Utilisateur',
-      first_name: isMainAdmin ? 'Patrice' : 'LIFRAS',
+      role: metaRole,
+      last_name:
+        typeof userMeta?.last_name === 'string' && userMeta.last_name
+          ? userMeta.last_name
+          : isMainAdmin
+            ? 'Finet'
+            : 'Utilisateur',
+      first_name:
+        typeof userMeta?.first_name === 'string' && userMeta.first_name
+          ? userMeta.first_name
+          : isMainAdmin
+            ? 'Patrice'
+            : 'LIFRAS',
       email: userEmail ?? 'patrice.finet@lifras.be',
+      febras_number:
+        typeof userMeta?.febras_number === 'string'
+          ? userMeta.febras_number
+          : DEMO_PROFILES[metaRole].febras_number,
+      phone_gsm:
+        typeof userMeta?.phone_gsm === 'string'
+          ? userMeta.phone_gsm
+          : DEMO_PROFILES[metaRole].phone_gsm,
+      club_name:
+        typeof userMeta?.club_name === 'string'
+          ? userMeta.club_name
+          : DEMO_PROFILES[metaRole].club_name,
     });
     setError(null);
   };
@@ -155,7 +206,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
       setSession(activeSession);
       setUser(activeSession?.user ?? null);
       if (activeSession?.user) {
-        await fetchProfile(activeSession.user.id, activeSession.user.email);
+        await fetchProfile(
+          activeSession.user.id,
+          activeSession.user.email,
+          activeSession.user.user_metadata
+        );
       }
       setLoading(false);
     });
@@ -167,7 +222,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
       setSession(newSession);
       setUser(newSession?.user ?? null);
       if (newSession?.user) {
-        await fetchProfile(newSession.user.id, newSession.user.email);
+        await fetchProfile(
+          newSession.user.id,
+          newSession.user.email,
+          newSession.user.user_metadata
+        );
       } else {
         setProfile(null);
       }
@@ -204,10 +263,142 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
     }
 
     if (signInData.user) {
-      await fetchProfile(signInData.user.id, signInData.user.email);
+      await fetchProfile(
+        signInData.user.id,
+        signInData.user.email,
+        signInData.user.user_metadata
+      );
     }
 
     setIsDemoMode(false);
+    return { error: null };
+  };
+
+  const signUpNewUser = async (
+    payload: SignUpPayload
+  ): Promise<{
+    error: string | null;
+    createdProfile: Profile | null;
+    requiresEmailConfirmation: boolean;
+  }> => {
+    setError(null);
+    const nowIso = new Date().toISOString();
+
+    const buildNewProfile = (id: string): Profile => ({
+      id,
+      role: payload.role,
+      cohort_id: 'cohort-2026',
+      sponsor_mn_id: null,
+      last_name: payload.last_name.trim(),
+      first_name: payload.first_name.trim(),
+      birth_date: null,
+      street_address: null,
+      postal_code: null,
+      city: null,
+      phone_landline: null,
+      phone_gsm: payload.phone_gsm.trim() || null,
+      email: payload.email.trim(),
+      febras_number: payload.febras_number.trim() || null,
+      cfps_year: null,
+      mf_year: null,
+      dives_count: 0,
+      club_name: payload.club_name.trim() || null,
+      club_president: null,
+      club_head_instructor: null,
+      club_head_gsm: null,
+      photo_storage_path: null,
+      aliases: [`${payload.last_name.trim()} ${payload.first_name.trim()}`],
+      created_at: nowIso,
+      updated_at: nowIso,
+    });
+
+    if (!isSupabaseConfigured) {
+      const localProfile = buildNewProfile(`user-${Date.now()}`);
+      setIsDemoMode(true);
+      setProfile(localProfile);
+      return {
+        error: null,
+        createdProfile: localProfile,
+        requiresEmailConfirmation: false,
+      };
+    }
+
+    const { data, error: signUpErr } = await supabase.auth.signUp({
+      email: payload.email.trim(),
+      password: payload.password,
+      options: {
+        data: {
+          first_name: payload.first_name.trim(),
+          last_name: payload.last_name.trim(),
+          role: payload.role,
+          febras_number: payload.febras_number.trim(),
+          phone_gsm: payload.phone_gsm.trim(),
+          club_name: payload.club_name.trim(),
+        },
+      },
+    });
+
+    if (signUpErr) {
+      setError(signUpErr.message);
+      return {
+        error: signUpErr.message,
+        createdProfile: null,
+        requiresEmailConfirmation: false,
+      };
+    }
+
+    const userId = data.user?.id ?? `user-${Date.now()}`;
+    const createdProfile = buildNewProfile(userId);
+
+    // Tentative d'enregistrement direct dans public.profiles si la session est ouverte
+    try {
+      await supabase.from('profiles').upsert({
+        id: createdProfile.id,
+        role: createdProfile.role,
+        last_name: createdProfile.last_name,
+        first_name: createdProfile.first_name,
+        email: createdProfile.email,
+        febras_number: createdProfile.febras_number,
+        phone_gsm: createdProfile.phone_gsm,
+        club_name: createdProfile.club_name,
+        aliases: createdProfile.aliases,
+      });
+    } catch {
+      // Ignorer si RLS bloque l'insertion directe avant confirmation e-mail
+    }
+
+    const hasActiveSession = Boolean(data.session);
+    if (hasActiveSession) {
+      setProfile(createdProfile);
+      setIsDemoMode(false);
+    }
+
+    return {
+      error: null,
+      createdProfile,
+      requiresEmailConfirmation: !hasActiveSession,
+    };
+  };
+
+  const requestPasswordReset = async (
+    email: string
+  ): Promise<{ error: string | null }> => {
+    setError(null);
+    if (!isSupabaseConfigured) {
+      return { error: null };
+    }
+    const redirectTo =
+      typeof window !== 'undefined'
+        ? `${window.location.origin}/connexion`
+        : 'https://carnet-de-bord-cmn.web.app/connexion';
+    const { error: resetErr } = await supabase.auth.resetPasswordForEmail(
+      email.trim(),
+      { redirectTo }
+    );
+    if (resetErr) {
+      setError(resetErr.message);
+      return { error: resetErr.message };
+    }
     return { error: null };
   };
 
@@ -238,6 +429,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
         error,
         isDemoMode,
         signInWithPassword,
+        signUpNewUser,
+        requestPasswordReset,
         signOut,
         switchDemoRole,
       }}
