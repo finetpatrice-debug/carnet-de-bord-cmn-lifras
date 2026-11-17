@@ -26,31 +26,33 @@
 
   html.dark {
     --background: 222.2 47.4% 7%;
-    --foreground: 210 40% 96%;
-    --card: 222.2 47.4% 10%;
-    --card-foreground: 210 40% 96%;
-    --primary: 199 89% 48%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 47.4% 11%;
+    --card-foreground: 210 40% 98%;
+    --primary: 199 89% 52%;
     --primary-foreground: 210 40% 98%;
-    --secondary: 217.2 32.6% 16%;
-    --secondary-foreground: 210 40% 96%;
-    --muted: 217.2 32.6% 15%;
-    --muted-foreground: 215 20.2% 70%;
-    --accent: 217.2 32.6% 17%;
-    --accent-foreground: 210 40% 96%;
-    --destructive: 0 62.8% 45%;
+    --secondary: 217.2 32.6% 18%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 16%;
+    --muted-foreground: 215 20.2% 76%;
+    --accent: 217.2 32.6% 19%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 48%;
     --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 20%;
-    --input: 217.2 32.6% 20%;
-    --ring: 199 89% 48%;
+    --border: 217.2 32.6% 24%;
+    --input: 217.2 32.6% 24%;
+    --ring: 199 89% 52%;
     color-scheme: dark;
   }
 }
 
-/* Adaptation automatique et harmonieuse du Mode Nuit sur l'ensemble des cartes et tableaux */
+/* ============================================================================
+   MODE NUIT HAUT CONTRASTE (LISIBILITE OPTIMALE SUR SMARTPHONE ET PC)
+   ============================================================================ */
 html.dark body,
 html.dark .bg-slate-50 {
   background-color: #0b1120 !important;
-  color: #f1f5f9 !important;
+  color: #f8fafc !important;
 }
 
 html.dark .bg-white,
@@ -58,14 +60,24 @@ html.dark .bg-white\/95,
 html.dark .bg-slate-50\/70,
 html.dark .bg-slate-50\/80 {
   background-color: #111827 !important;
+  color: #f8fafc !important;
+}
+
+html.dark .bg-slate-100,
+html.dark .bg-slate-200 {
+  background-color: #1e293b !important;
   color: #f1f5f9 !important;
 }
 
-html.dark .bg-slate-100 {
+html.dark .hover\:bg-slate-50:hover,
+html.dark .hover\:bg-slate-50\/70:hover,
+html.dark .hover\:bg-slate-100\/60:hover,
+html.dark .hover\:bg-slate-200:hover,
+html.dark .hover\:bg-white:hover {
   background-color: #1e293b !important;
-  color: #e2e8f0 !important;
 }
 
+/* Textes principaux et secondaires à contraste renforcé (WCAG AAA) */
 html.dark .text-slate-900,
 html.dark .text-slate-800 {
   color: #f8fafc !important;
@@ -73,24 +85,140 @@ html.dark .text-slate-800 {
 
 html.dark .text-slate-700,
 html.dark .text-slate-600 {
+  color: #e2e8f0 !important;
+}
+
+html.dark .text-slate-500,
+html.dark .text-slate-400 {
   color: #cbd5e1 !important;
 }
 
-html.dark .text-slate-500 {
-  color: #94a3b8 !important;
+/* Couleurs d'accentuation rendues lumineuses sur fond sombre */
+html.dark .text-sky-950,
+html.dark .text-sky-900,
+html.dark .text-sky-800,
+html.dark .text-sky-700 {
+  color: #7dd3fc !important;
 }
 
+html.dark .text-emerald-950,
+html.dark .text-emerald-900,
+html.dark .text-emerald-800,
+html.dark .text-emerald-700 {
+  color: #6ee7b7 !important;
+}
+
+html.dark .text-amber-950,
+html.dark .text-amber-900,
+html.dark .text-amber-800,
+html.dark .text-amber-700 {
+  color: #fcd34d !important;
+}
+
+html.dark .text-orange-900 {
+  color: #fdba74 !important;
+}
+
+html.dark .text-red-900,
+html.dark .text-red-700,
+html.dark .text-rose-900 {
+  color: #fca5a5 !important;
+}
+
+/* Cartes d'alerte, encadrés pédagogiques et boutons de cotation inactifs */
+html.dark .bg-sky-50,
+html.dark .bg-sky-50\/40,
+html.dark .bg-sky-50\/70,
+html.dark .bg-sky-50\/90,
+html.dark .bg-sky-100 {
+  background-color: #0c2d48 !important;
+  border-color: #0284c7 !important;
+  color: #e0f2fe !important;
+}
+
+html.dark .bg-emerald-50,
+html.dark .bg-emerald-50\/50,
+html.dark .bg-emerald-100 {
+  background-color: #063729 !important;
+  border-color: #059669 !important;
+  color: #d1fae5 !important;
+}
+
+html.dark .bg-green-50 {
+  background-color: #0b3b24 !important;
+  border-color: #16a34a !important;
+  color: #dcfce7 !important;
+}
+
+html.dark .bg-amber-50,
+html.dark .bg-amber-50\/50,
+html.dark .bg-amber-50\/70,
+html.dark .bg-amber-100 {
+  background-color: #3b2506 !important;
+  border-color: #d97706 !important;
+  color: #fef3c7 !important;
+}
+
+html.dark .bg-orange-50 {
+  background-color: #3e1d08 !important;
+  border-color: #ea580c !important;
+  color: #ffedd5 !important;
+}
+
+html.dark .bg-red-50,
+html.dark .bg-rose-50 {
+  background-color: #3f1118 !important;
+  border-color: #e11d48 !important;
+  color: #ffe4e6 !important;
+}
+
+/* Bordures et séparateurs de tableaux bien visibles en Mode Nuit */
+html.dark .border,
+html.dark .border-b,
+html.dark .border-t,
 html.dark .border-slate-200,
 html.dark .border-slate-300,
 html.dark .border-slate-100,
+html.dark th,
+html.dark td,
+html.dark .divide-y > :not([hidden]) ~ :not([hidden]),
 html.dark .divide-slate-200 > :not([hidden]) ~ :not([hidden]) {
-  border-color: #1e293b !important;
+  border-color: #334155 !important;
 }
 
+/* Graphiques Recharts (Radar, Courbes, Légendes, Infobulles) en Mode Nuit */
+html.dark .recharts-polar-angle-axis-tick-value,
+html.dark .recharts-cartesian-axis-tick-value,
+html.dark .recharts-text {
+  fill: #f1f5f9 !important;
+}
+
+html.dark .recharts-polar-grid-angle line,
+html.dark .recharts-polar-grid-concentric-polygon,
+html.dark .recharts-cartesian-grid line {
+  stroke: #334155 !important;
+}
+
+html.dark .recharts-default-tooltip {
+  background-color: #0f172a !important;
+  border-color: #38bdf8 !important;
+  color: #f8fafc !important;
+}
+
+html.dark .recharts-tooltip-item {
+  color: #e2e8f0 !important;
+}
+
+/* Champs de formulaire, listes déroulantes et zones de texte */
 html.dark input,
 html.dark select,
 html.dark textarea {
   background-color: #0f172a !important;
   color: #f8fafc !important;
-  border-color: #334155 !important;
+  border-color: #475569 !important;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #94a3b8 !important;
 }

@@ -158,7 +158,8 @@ function renderWrappedRadarTick(
       x={x}
       y={y}
       textAnchor={textAnchor}
-      fill="#0f172a"
+      className="fill-slate-900 dark:fill-slate-100"
+      fill="currentColor"
       fontSize={11}
       fontWeight={700}
     >
