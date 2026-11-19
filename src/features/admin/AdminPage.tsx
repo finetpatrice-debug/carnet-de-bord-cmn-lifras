@@ -29,8 +29,12 @@ import {
   ArrowRightLeft,
   Camera,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   FileWarning,
   History,
+  Maximize2,
+  Minimize2,
   Plus,
   Shield,
   UserPlus,
@@ -184,6 +188,9 @@ export function AdminPage(): React.ReactElement {
 
   // État pour l'ajout d'alias sur un profil MN
   const [aliasInputs, setAliasInputs] = useState<Record<string, string>>({});
+
+  // Affichage du Journal d'Audit : 'collapsed' (replié), 'compact' (hauteur limitée), 'expanded' (agrandi)
+  const [auditViewSize, setAuditViewSize] = useState<'collapsed' | 'compact' | 'expanded'>('compact');
 
   // État pour la modale de reclassement traçable d'une épreuve mal aiguillée
   const [selectedEvaluation, setSelectedEvaluation] = useState<Evaluation | null>(
@@ -1179,64 +1186,127 @@ export function AdminPage(): React.ReactElement {
       {/* 3. Journal d'Audit Immuable (audit_logs) */}
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-2 text-sky-700">
-            <History className="h-5 w-5" />
-            <CardTitle className="text-base">
-              3. Journal d’Audit Immuable (Table <code>audit_logs</code>)
-            </CardTitle>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-sky-700">
+              <History className="h-5 w-5" />
+              <CardTitle className="text-base">
+                3. Journal d’Audit Immuable (Table <code>audit_logs</code>)
+              </CardTitle>
+              <Badge variant="secondary" className="text-[11px]">
+                {auditLogs.length} entrée{auditLogs.length > 1 ? 's' : ''}
+              </Badge>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Button
+                type="button"
+                size="sm"
+                variant={auditViewSize === 'collapsed' ? 'default' : 'outline'}
+                onClick={() =>
+                  setAuditViewSize((prev) =>
+                    prev === 'collapsed' ? 'compact' : 'collapsed'
+                  )
+                }
+                className="h-7 px-2 text-xs"
+              >
+                {auditViewSize === 'collapsed' ? (
+                  <>
+                    <ChevronDown className="h-3.5 w-3.5" />
+                    Déplier
+                  </>
+                ) : (
+                  <>
+                    <ChevronUp className="h-3.5 w-3.5" />
+                    Réduire
+                  </>
+                )}
+              </Button>
+              {auditViewSize !== 'collapsed' && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={auditViewSize === 'expanded' ? 'default' : 'outline'}
+                  onClick={() =>
+                    setAuditViewSize((prev) =>
+                      prev === 'expanded' ? 'compact' : 'expanded'
+                    )
+                  }
+                  className="h-7 px-2 text-xs"
+                >
+                  {auditViewSize === 'expanded' ? (
+                    <>
+                      <Minimize2 className="h-3.5 w-3.5" />
+                      Compact
+                    </>
+                  ) : (
+                    <>
+                      <Maximize2 className="h-3.5 w-3.5" />
+                      Agrandir
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
           </div>
           <CardDescription>
             Historique complet et non modifiable des reclassements d’épreuves et des
             imports administratifs avec valeurs JSONB avant/après.
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          {auditLogs.length === 0 ? (
-            <p className="text-xs text-slate-500">
-              Aucune opération consignée dans cette session. Effectuez un reclassement
-              d’épreuve ci-dessus ou validez un import Excel pour inspecter l’écriture
-              dans <code>audit_logs</code>.
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {auditLogs.map((log) => (
-                <div
-                  key={log.id}
-                  className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <Badge className="bg-slate-900 text-white">{log.action}</Badge>
-                      <span className="font-mono text-slate-600">
-                        {log.entity_type} / {log.entity_id}
+        {auditViewSize !== 'collapsed' && (
+          <CardContent>
+            {auditLogs.length === 0 ? (
+              <p className="text-xs text-slate-500">
+                Aucune opération consignée dans cette session. Effectuez un reclassement
+                d’épreuve ci-dessus ou validez un import Excel pour inspecter l’écriture
+                dans <code>audit_logs</code>.
+              </p>
+            ) : (
+              <div
+                className={`space-y-3 ${
+                  auditViewSize === 'compact'
+                    ? 'max-h-72 overflow-y-auto pr-1'
+                    : ''
+                }`}
+              >
+                {auditLogs.map((log) => (
+                  <div
+                    key={log.id}
+                    className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <Badge className="bg-slate-900 text-white">{log.action}</Badge>
+                        <span className="font-mono text-slate-600">
+                          {log.entity_type} / {log.entity_id}
+                        </span>
+                      </div>
+                      <span className="text-slate-400">
+                        {new Date(log.created_at).toLocaleString('fr-BE')}
                       </span>
                     </div>
-                    <span className="text-slate-400">
-                      {new Date(log.created_at).toLocaleString('fr-BE')}
-                    </span>
-                  </div>
-                  <p className="mt-1.5 font-medium text-slate-800">
-                    Motif : « {log.reason} »
-                  </p>
-                  <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                    <div className="rounded border bg-white p-2 font-mono text-[11px] text-slate-600">
-                      <div className="font-sans font-semibold text-slate-500">
-                        previous_value (JSONB) :
+                    <p className="mt-1.5 font-medium text-slate-800">
+                      Motif : « {log.reason} »
+                    </p>
+                    <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                      <div className="rounded border bg-white p-2 font-mono text-[11px] text-slate-600">
+                        <div className="font-sans font-semibold text-slate-500">
+                          previous_value (JSONB) :
+                        </div>
+                        {JSON.stringify(log.previous_value)}
                       </div>
-                      {JSON.stringify(log.previous_value)}
-                    </div>
-                    <div className="rounded border bg-white p-2 font-mono text-[11px] text-slate-700">
-                      <div className="font-sans font-semibold text-sky-700">
-                        new_value (JSONB) :
+                      <div className="rounded border bg-white p-2 font-mono text-[11px] text-slate-700">
+                        <div className="font-sans font-semibold text-sky-700">
+                          new_value (JSONB) :
+                        </div>
+                        {JSON.stringify(log.new_value)}
                       </div>
-                      {JSON.stringify(log.new_value)}
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        )}
       </Card>
     </div>
   );
