@@ -10,6 +10,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['logo-lifras.jpg', 'favicon.svg'],
       manifest: {
+        id: '/',
+        start_url: '/',
+        scope: '/',
         name: 'Carnet de Bord Digital CMN - LIFRAS',
         short_name: 'CMN LIFRAS',
         description: 'Suivi et évaluation des Candidats Moniteurs Nationaux (LIFRAS)',
@@ -20,6 +23,12 @@ export default defineConfig({
         orientation: 'portrait',
         lang: 'fr',
         icons: [
+          {
+            src: 'logo-lifras.jpg',
+            sizes: '192x192',
+            type: 'image/jpeg',
+            purpose: 'any',
+          },
           {
             src: 'logo-lifras.jpg',
             sizes: '512x512',

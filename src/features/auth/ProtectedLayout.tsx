@@ -199,8 +199,10 @@ export function ProtectedLayout(): React.ReactElement {
   const toggleFullscreen = async (): Promise<void> => {
     try {
       if (!document.fullscreenElement) {
-        await document.documentElement.requestFullscreen();
+        sessionStorage.removeItem('cmn_fs_dismissed');
+        await document.documentElement.requestFullscreen({ navigationUI: 'hide' });
       } else if (document.exitFullscreen) {
+        sessionStorage.setItem('cmn_fs_dismissed', '1');
         await document.exitFullscreen();
       }
     } catch {
