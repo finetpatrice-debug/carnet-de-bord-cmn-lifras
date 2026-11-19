@@ -185,17 +185,17 @@ export function LoginPage(): React.ReactElement {
   const displayedError = localError ?? error;
 
   return (
-    <div className="relative flex min-h-[100dvh] flex-col justify-center overflow-x-hidden bg-slate-950 p-3 sm:p-6">
-      {/* 1. PC & Tablette (md+) : Image officielle en fond d'écran plein cadre net */}
+    <div className="relative flex min-h-[100dvh] flex-col justify-start md:justify-start overflow-x-hidden bg-slate-950 p-3 sm:p-5 md:pl-10 md:pt-5 lg:pl-14 lg:pt-6">
+      {/* 1. PC & Tablette (md+) : Image officielle en fond d'écran plein cadre net (plongeur parfaitement dégagé à droite) */}
       <img
         src="/Cover Carnet de Bord light.jpg"
         alt=""
         aria-hidden="true"
-        className="pointer-events-none fixed inset-0 hidden md:block h-full w-full object-cover object-center"
+        className="pointer-events-none fixed inset-0 hidden md:block h-full w-full object-cover object-right"
       />
       <div
         aria-hidden="true"
-        className="pointer-events-none fixed inset-0 hidden md:block bg-gradient-to-br from-slate-950/65 via-slate-900/40 to-sky-950/55"
+        className="pointer-events-none fixed inset-0 hidden md:block bg-gradient-to-r from-slate-950/75 via-slate-950/35 to-transparent"
       />
 
       {/* 2. GSM (< md) : Fond sombre dégradé neutre + Bandeau photo dédié en haut */}
@@ -204,8 +204,8 @@ export function LoginPage(): React.ReactElement {
         className="pointer-events-none fixed inset-0 md:hidden bg-gradient-to-br from-slate-950 via-slate-900 to-sky-950"
       />
 
-      {/* Conteneur principal centré, tenant à 100 % sans scroll */}
-      <div className="relative z-10 mx-auto w-full max-w-4xl space-y-3 md:space-y-4">
+      {/* Conteneur principal : centré sur GSM, calé en haut à gauche (colonne unique) sur PC pour dégager entièrement le plongeur à droite */}
+      <div className="relative z-10 mx-auto md:mx-0 w-full max-w-md lg:max-w-[440px] space-y-2.5 md:space-y-3">
         {/* Bandeau photo affiché UNIQUEMENT sur GSM (< md) */}
         <div className="relative overflow-hidden rounded-xl border border-sky-400/30 shadow-xl md:hidden">
           <img
@@ -219,10 +219,10 @@ export function LoginPage(): React.ReactElement {
               <img
                 src="/logo-lifras.jpg"
                 alt="Logo Officiel LIFRAS"
-                className="h-9 w-9 shrink-0 rounded-full border-2 border-sky-400 bg-white object-cover shadow-md"
+                className="h-10 w-10 shrink-0 rounded-full border-2 border-sky-400 bg-white object-cover shadow-md"
               />
               <div className="min-w-0">
-                <div className="truncate text-[9px] font-extrabold uppercase tracking-wider text-sky-300">
+                <div className="truncate text-[10px] font-extrabold uppercase tracking-wider text-sky-300">
                   Commission de l’Enseignement — LIFRAS
                 </div>
                 <h1 className="truncate text-base font-extrabold tracking-tight text-white drop-shadow">
@@ -236,33 +236,34 @@ export function LoginPage(): React.ReactElement {
           </div>
         </div>
 
-        {/* En-tête léger flottant sur le fond d'écran, affiché UNIQUEMENT sur PC (md+) */}
-        <div className="hidden md:flex items-center justify-between gap-3 px-1">
-          <div className="flex items-center gap-3 min-w-0">
+        {/* En-tête agrandi, remonté en haut à gauche sur PC (md+) */}
+        <div className="hidden md:flex items-center justify-between gap-3 px-0.5 pb-0.5">
+          <div className="flex items-center gap-3.5 min-w-0">
             <img
               src="/logo-lifras.jpg"
               alt="Logo Officiel LIFRAS"
-              className="h-12 w-12 shrink-0 rounded-full border-2 border-sky-400 bg-white object-cover shadow-lg"
+              className="h-16 w-16 shrink-0 rounded-full border-2 border-sky-400 bg-white object-cover shadow-xl"
             />
             <div className="min-w-0">
-              <div className="truncate text-xs font-extrabold uppercase tracking-wider text-sky-300 drop-shadow">
+              <div className="text-xs font-extrabold uppercase tracking-wider text-sky-300 drop-shadow">
                 Commission de l’Enseignement — LIFRAS
               </div>
-              <h1 className="truncate text-2xl font-extrabold tracking-tight text-white drop-shadow-md">
+              <h1 className="text-2xl font-extrabold leading-tight tracking-tight text-white drop-shadow-md">
                 Carnet de Bord Digital CMN
               </h1>
             </div>
           </div>
-          <Badge className="shrink-0 border border-emerald-400/60 bg-slate-950/70 font-mono text-xs text-emerald-200 backdrop-blur-md">
+          <Badge className="shrink-0 border border-emerald-400/60 bg-slate-950/75 font-mono text-xs text-emerald-200 backdrop-blur-md">
             {APP_VERSION}
           </Badge>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
-          {/* Colonne Authentification, Inscription & Mot de passe oublié (effet verre translucide) */}
-          <Card className="border-white/30 bg-white/90 backdrop-blur-md shadow-2xl">
-            <CardHeader className="space-y-1.5 p-4 pb-2">
-              <CardTitle className="text-lg text-slate-900">
+        {/* Empilement vertical (Connexion & Inscription en haut, Accès rapide juste en dessous) pour laisser toute la moitié droite libre pour le plongeur */}
+        <div className="flex flex-col gap-2.5 md:gap-3">
+          {/* Carte 1 : Authentification, Inscription & Mot de passe oublié */}
+          <Card className="border-white/30 bg-white/92 backdrop-blur-md shadow-2xl">
+            <CardHeader className="space-y-1 p-3.5 pb-1.5">
+              <CardTitle className="text-base text-slate-900">
                 Connexion & Inscription
               </CardTitle>
               <CardDescription className="text-xs">
@@ -662,37 +663,33 @@ export function LoginPage(): React.ReactElement {
           </CardContent>
         </Card>
 
-        {/* Colonne Simulateur des 3 Rôles Réglementaires */}
+        {/* Carte 2 : Accès rapide par Rôle Réglementaire empilée juste en dessous */}
         <Card className="border-sky-400/30 bg-slate-950/75 text-slate-100 backdrop-blur-md shadow-2xl">
-          <CardHeader className="space-y-1 p-3.5 sm:p-4 pb-2">
+          <CardHeader className="space-y-0.5 p-3 pb-1.5">
             <div className="flex items-center justify-between">
-              <Badge variant="secondary" className="bg-sky-500/20 text-sky-300 text-[11px]">
-                Contrôle RBAC & RLS
+              <CardTitle className="text-sm font-bold text-white">
+                Accès rapide par Rôle Réglementaire
+              </CardTitle>
+              <Badge variant="secondary" className="bg-sky-500/20 text-sky-300 text-[10px]">
+                <ShieldCheck className="mr-1 h-3 w-3 text-sky-400" />
+                RBAC & RLS
               </Badge>
-              <ShieldCheck className="h-4 w-4 text-sky-400" />
             </div>
-            <CardTitle className="text-base text-white">
-              Accès rapide par Rôle Réglementaire
-            </CardTitle>
-            <CardDescription className="text-xs text-slate-300">
-              Testez immédiatement le layout protégé et le cloisonnement des 3 rôles
-              du cursus Candidat Moniteur National.
-            </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-2 p-3.5 sm:p-4 pt-2">
+          <CardContent className="space-y-1.5 p-3 pt-1">
             {ROLES_LIST.map((role) => (
               <button
                 key={role}
                 type="button"
                 onClick={() => handleDemoLogin(role)}
-                className="flex w-full items-center justify-between rounded-lg border border-slate-700 bg-slate-800/70 px-3.5 py-2.5 text-left transition hover:border-sky-400 hover:bg-slate-800"
+                className="flex w-full items-center justify-between rounded-lg border border-slate-700 bg-slate-800/75 px-3 py-1.5 text-left transition hover:border-sky-400 hover:bg-slate-800"
               >
                 <div>
-                  <div className="text-sm font-semibold text-white">
+                  <div className="text-xs font-semibold text-white">
                     {USER_ROLE_LABELS[role]}
                   </div>
                 </div>
-                <UserCheck className="h-4 w-4 text-sky-400" />
+                <UserCheck className="h-3.5 w-3.5 text-sky-400" />
               </button>
             ))}
           </CardContent>
