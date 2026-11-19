@@ -185,29 +185,74 @@ export function LoginPage(): React.ReactElement {
   const displayedError = localError ?? error;
 
   return (
-    <div className="flex min-h-screen flex-col justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-sky-950 p-4 sm:p-8">
-      <div className="mx-auto w-full max-w-4xl grid gap-6 md:grid-cols-2">
-        {/* Colonne Authentification, Inscription & Mot de passe oublié */}
-        <Card className="border-slate-700/60 bg-white/95 backdrop-blur">
-          <CardHeader className="space-y-2">
-            <div className="flex items-center justify-between gap-2 text-sky-700">
-              <div className="flex items-center gap-2.5">
-                <img
-                  src="/logo-lifras.jpg"
-                  alt="Logo Officiel LIFRAS"
-                  className="h-9 w-9 rounded-full object-cover shadow-sm"
-                />
-                <span className="text-xs font-bold uppercase tracking-wider">
-                  Commission de l’Enseignement — LIFRAS
-                </span>
+    <div className="relative flex min-h-screen flex-col justify-center overflow-hidden bg-slate-950 p-3 sm:p-6 lg:p-10">
+      {/* Arrière-plan flouté immersif (PC & GSM) */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-25 blur-sm scale-105"
+        style={{
+          backgroundImage: "url('/Cover%20Carnet%20de%20Bord%20light.jpg')",
+        }}
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 bg-gradient-to-br from-slate-950/90 via-slate-900/80 to-sky-950/85"
+      />
+
+      {/* Conteneur principal avec photo de couverture redimensionnée pour GSM (bannière haute) et PC (colonne visuelle) */}
+      <div className="relative z-10 mx-auto w-full max-w-5xl space-y-4 md:space-y-6">
+        {/* Bannière photo plein cadre optimisée sur GSM & Tablette (< md) et bandeau panoramique sur PC */}
+        <div className="relative overflow-hidden rounded-2xl border border-sky-400/30 shadow-2xl">
+          <img
+            src="/Cover Carnet de Bord light.jpg"
+            alt="Moniteur National LIFRAS face à la mer — Carnet de Bord Digital CMN"
+            className="h-44 w-full object-cover object-[70%_30%] sm:h-56 md:h-64 lg:h-72"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/35 to-transparent" />
+          <div className="absolute bottom-0 left-0 right-0 flex flex-wrap items-end justify-between gap-2 p-3.5 sm:p-5">
+            <div className="flex items-center gap-3">
+              <img
+                src="/logo-lifras.jpg"
+                alt="Logo Officiel LIFRAS"
+                className="h-10 w-10 sm:h-12 sm:w-12 shrink-0 rounded-full border-2 border-sky-400 bg-white object-cover shadow-md"
+              />
+              <div>
+                <div className="text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-sky-300">
+                  Ligue Francophone de Recherches et d’Activités Sous-Marines
+                </div>
+                <h1 className="text-lg sm:text-2xl md:text-3xl font-extrabold tracking-tight text-white drop-shadow">
+                  Carnet de Bord Digital CMN
+                </h1>
               </div>
-              <Badge variant="secondary" className="font-mono text-xs">
-                {APP_VERSION}
-              </Badge>
             </div>
-            <CardTitle className="text-2xl text-slate-900">
-              Carnet de Bord Digital CMN
-            </CardTitle>
+            <Badge className="border border-emerald-400/50 bg-emerald-500/25 font-mono text-xs text-emerald-200 backdrop-blur-sm">
+              {APP_VERSION}
+            </Badge>
+          </div>
+        </div>
+
+        <div className="grid gap-5 md:grid-cols-2">
+          {/* Colonne Authentification, Inscription & Mot de passe oublié */}
+          <Card className="border-slate-700/60 bg-white/95 backdrop-blur shadow-xl">
+            <CardHeader className="space-y-2 pb-3">
+              <div className="flex items-center justify-between gap-2 text-sky-700">
+                <div className="flex items-center gap-2">
+                  <img
+                    src="/logo-lifras.jpg"
+                    alt="Logo Officiel LIFRAS"
+                    className="h-7 w-7 rounded-full object-cover shadow-sm"
+                  />
+                  <span className="text-xs font-bold uppercase tracking-wider">
+                    Commission de l’Enseignement — LIFRAS
+                  </span>
+                </div>
+                <Badge variant="secondary" className="font-mono text-xs">
+                  {APP_VERSION}
+                </Badge>
+              </div>
+              <CardTitle className="text-xl sm:text-2xl text-slate-900">
+                Connexion & Inscription
+              </CardTitle>
             <CardDescription>
               {mode === 'SIGN_IN' &&
                 'Portail officiel sécurisé de suivi du cursus Candidat Moniteur National.'}
@@ -640,6 +685,7 @@ export function LoginPage(): React.ReactElement {
             ))}
           </CardContent>
         </Card>
+        </div>
       </div>
     </div>
   );
