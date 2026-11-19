@@ -574,6 +574,39 @@ function mergeArraysById<T extends { id: string }>(
   return Array.from(byId.values());
 }
 
+function mergeProfilesSmart(base: Profile[], incoming: Profile[]): Profile[] {
+  const byId = new Map<string, Profile>();
+  for (const item of base) {
+    byId.set(item.id, item);
+  }
+  for (const inc of incoming) {
+    const existing = byId.get(inc.id);
+    if (!existing) {
+      byId.set(inc.id, inc);
+      continue;
+    }
+    const existingTs = Date.parse(existing.updated_at || '') || 0;
+    const incomingTs = Date.parse(inc.updated_at || '') || 0;
+    const winner = incomingTs >= existingTs ? inc : existing;
+    const loser = incomingTs >= existingTs ? existing : inc;
+
+    // Ne jamais écraser une photo existante par null lors d'une synchronisation multi-appareils
+    const preservedPhoto =
+      winner.photo_storage_path || loser.photo_storage_path || null;
+
+    const mergedAliases = Array.from(
+      new Set([...(existing.aliases ?? []), ...(inc.aliases ?? [])])
+    );
+
+    byId.set(inc.id, {
+      ...winner,
+      photo_storage_path: preservedPhoto,
+      aliases: mergedAliases,
+    });
+  }
+  return Array.from(byId.values());
+}
+
 function mergeScoresArrays(
   base: EvaluationScore[],
   incoming: EvaluationScore[]
@@ -640,11 +673,11 @@ export function AdminStoreProvider({
       try {
         if (key === 'mn_directory') {
           setMnDirectory((prev) =>
-            mergeArraysById(prev, payload as Profile[])
+            mergeProfilesSmart(prev, payload as Profile[])
           );
         } else if (key === 'candidates') {
           setCandidates((prev) =>
-            mergeArraysById(prev, payload as Profile[])
+            mergeProfilesSmart(prev, payload as Profile[])
           );
         } else if (key === 'evaluations') {
           setEvaluations((prev) =>
@@ -673,8 +706,43 @@ export function AdminStoreProvider({
           .select('key, payload');
         if (cancelled) return;
         if (!error && Array.isArray(data) && data.length > 0) {
+          const remoteByKey = new Map<string, unknown>();
           for (const row of data) {
+            remoteByKey.set(row.key as string, row.payload);
             applyRemoteRow(row.key as string, row.payload);
+          }
+
+          // Si l'appareil local possède des photos ou profils plus récents absents du cloud, on les republie sans écraser les photos distantes
+          const remoteMn = remoteByKey.get('mn_directory');
+          if (Array.isArray(remoteMn)) {
+            const mergedMn = mergeProfilesSmart(mnDirectory, remoteMn as Profile[]);
+            const remoteHasAllLocalPhotos = mergedMn.every((m) => {
+              const r = (remoteMn as Profile[]).find((x) => x.id === m.id);
+              return Boolean(r) && (!m.photo_storage_path || Boolean(r?.photo_storage_path));
+            });
+            if (!remoteHasAllLocalPhotos) {
+              void supabase.from('cmn_shared_state').upsert({
+                key: 'mn_directory',
+                payload: mergedMn,
+                updated_at: new Date().toISOString(),
+              });
+            }
+          }
+
+          const remoteCand = remoteByKey.get('candidates');
+          if (Array.isArray(remoteCand)) {
+            const mergedCand = mergeProfilesSmart(candidates, remoteCand as Profile[]);
+            const remoteHasAllLocalPhotos = mergedCand.every((c) => {
+              const r = (remoteCand as Profile[]).find((x) => x.id === c.id);
+              return Boolean(r) && (!c.photo_storage_path || Boolean(r?.photo_storage_path));
+            });
+            if (!remoteHasAllLocalPhotos) {
+              void supabase.from('cmn_shared_state').upsert({
+                key: 'candidates',
+                payload: mergedCand,
+                updated_at: new Date().toISOString(),
+              });
+            }
           }
         } else if (!error && Array.isArray(data) && data.length === 0) {
           // Premier appareil à se connecter sur la table vide : publie immédiatement ses données locales (photos, profils, évaluations)
@@ -797,11 +865,21 @@ export function AdminStoreProvider({
           c.id === payload.candidateProfile.id
       );
       if (exists) {
-        return prev.map((c) =>
-          c.email.toLowerCase() === payload.candidateProfile.email.toLowerCase()
-            ? payload.candidateProfile
-            : c
-        );
+        return prev.map((c) => {
+          const isMatch =
+            c.email.toLowerCase() === payload.candidateProfile.email.toLowerCase() ||
+            c.id === payload.candidateProfile.id;
+          if (!isMatch) return c;
+          return {
+            ...payload.candidateProfile,
+            id: c.id,
+            photo_storage_path:
+              payload.candidateProfile.photo_storage_path || c.photo_storage_path || null,
+            aliases: Array.from(
+              new Set([...(c.aliases ?? []), ...(payload.candidateProfile.aliases ?? [])])
+            ),
+          };
+        });
       }
       return [...prev, payload.candidateProfile];
     });
