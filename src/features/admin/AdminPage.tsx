@@ -1273,13 +1273,13 @@ export function AdminPage(): React.ReactElement {
                 de restauration.
               </p>
             ) : (
-              <div className="grid gap-3 md:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 {archivedProfiles.map((arch) => (
                   <div
                     key={arch.id}
-                    className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-200 bg-white p-3"
+                    className="flex min-w-0 max-w-full flex-col gap-3 overflow-hidden rounded-lg border border-amber-200 bg-white p-3 sm:flex-row sm:items-center sm:justify-between"
                   >
-                    <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="flex min-w-0 flex-1 items-center gap-2.5">
                       {arch.photo_storage_path ? (
                         <img
                           src={arch.photo_storage_path}
@@ -1291,12 +1291,15 @@ export function AdminPage(): React.ReactElement {
                           {`${arch.first_name.charAt(0)}${arch.last_name.charAt(0)}`.toUpperCase()}
                         </div>
                       )}
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <div className="truncate text-sm font-semibold text-slate-900">
                           {arch.first_name} {arch.last_name}
                         </div>
+                        <div className="text-[11px] font-medium text-slate-600">
+                          {USER_ROLE_LABELS[arch.role]}
+                        </div>
                         <div className="truncate text-[11px] text-slate-500">
-                          {USER_ROLE_LABELS[arch.role]} • {arch.email}
+                          {arch.email}
                         </div>
                         <div className="text-[10px] text-slate-400">
                           Archivé le{' '}
@@ -1304,7 +1307,7 @@ export function AdminPage(): React.ReactElement {
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex shrink-0 items-center gap-1.5">
                       <Button
                         type="button"
                         size="sm"
