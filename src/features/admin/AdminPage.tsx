@@ -58,6 +58,7 @@ export function AdminPage(): React.ReactElement {
     createCandidateProfile,
     updateProfileRole,
     updateFullProfile,
+    deleteProfile,
     clearAuditLogs,
   } = useAdminStore();
 
@@ -1056,21 +1057,47 @@ export function AdminPage(): React.ReactElement {
                   </div>
                 </div>
 
-                <div className="flex shrink-0 items-center justify-end gap-2 border-t bg-slate-50 px-4 py-3 sm:px-6">
+                <div className="flex shrink-0 items-center justify-between gap-2 border-t bg-slate-50 px-4 py-3 sm:px-6">
                   <Button
                     type="button"
-                    variant="outline"
-                    onClick={() => setEditingProfile(null)}
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => {
+                      if (
+                        window.confirm(
+                          `Confirmer la suppression définitive du profil de ${editingProfile.first_name} ${editingProfile.last_name} ?`
+                        )
+                      ) {
+                        deleteProfile(
+                          editingProfile.id,
+                          activeAdmin?.id ?? 'admin-dtf'
+                        );
+                        setCandidateCreatedMsg(
+                          `Le profil de ${editingProfile.first_name} ${editingProfile.last_name} a été supprimé.`
+                        );
+                        setEditingProfile(null);
+                      }
+                    }}
                   >
-                    Annuler
+                    <Trash2 className="h-4 w-4" />
+                    Supprimer ce profil
                   </Button>
-                  <Button
-                    type="submit"
-                    className="bg-emerald-600 text-white hover:bg-emerald-700"
-                  >
-                    <CheckCircle2 className="h-4 w-4" />
-                    Enregistrer les modifications
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setEditingProfile(null)}
+                    >
+                      Annuler
+                    </Button>
+                    <Button
+                      type="submit"
+                      className="bg-emerald-600 text-white hover:bg-emerald-700"
+                    >
+                      <CheckCircle2 className="h-4 w-4" />
+                      Enregistrer les modifications
+                    </Button>
+                  </div>
                 </div>
               </form>
             </div>
@@ -1133,6 +1160,29 @@ export function AdminPage(): React.ReactElement {
                         className="h-7 px-2 text-xs"
                       >
                         Modifier le profil
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="destructive"
+                        title={`Supprimer le profil de ${mn.first_name} ${mn.last_name}`}
+                        aria-label={`Supprimer ${mn.first_name} ${mn.last_name}`}
+                        onClick={() => {
+                          if (
+                            window.confirm(
+                              `Confirmer la suppression définitive du profil de ${mn.first_name} ${mn.last_name} ?`
+                            )
+                          ) {
+                            deleteProfile(mn.id, activeAdmin?.id ?? 'admin-dtf');
+                            setCandidateCreatedMsg(
+                              `Le profil de ${mn.first_name} ${mn.last_name} a été supprimé.`
+                            );
+                          }
+                        }}
+                        className="h-7 px-2 text-xs"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Supprimer
                       </Button>
                       <Badge variant="outline" className="font-mono text-[11px]">
                         FEBRAS #{mn.febras_number}

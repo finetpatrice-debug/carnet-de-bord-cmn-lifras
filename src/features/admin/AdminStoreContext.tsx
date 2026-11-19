@@ -51,6 +51,7 @@ interface AdminStoreContextValue {
     actorId: string
   ) => void;
   updateFullProfile: (updated: Profile, actorId: string) => void;
+  deleteProfile: (profileId: string, actorId: string) => void;
   clearAuditLogs: (actorEmail: string, actorId: string) => void;
 }
 
@@ -524,6 +525,7 @@ const STORAGE_KEYS = {
   EVALUATIONS: 'cmn_lifras_evaluations_v1',
   SCORES: 'cmn_lifras_scores_v1',
   AUDIT_LOGS: 'cmn_lifras_audit_logs_v1',
+  DELETED_PROFILES: 'cmn_lifras_deleted_profiles_v1',
 } as const;
 
 function loadAndMergeById<T extends { id: string }>(
@@ -649,12 +651,30 @@ export function AdminStoreProvider({
 }: {
   children: React.ReactNode;
 }): React.ReactElement {
-  const [mnDirectory, setMnDirectory] = useState<Profile[]>(() =>
-    loadAndMergeById(STORAGE_KEYS.MN_DIRECTORY, INITIAL_MN_DIRECTORY)
+  const [deletedProfileIds, setDeletedProfileIds] = useState<string[]>(() =>
+    loadFromStorage<string[]>(STORAGE_KEYS.DELETED_PROFILES, [])
   );
-  const [candidates, setCandidates] = useState<Profile[]>(() =>
-    loadAndMergeById(STORAGE_KEYS.CANDIDATES, INITIAL_CANDIDATES)
-  );
+  const deletedIdsRef = useRef<Set<string>>(new Set(deletedProfileIds));
+  deletedIdsRef.current = new Set(deletedProfileIds);
+
+  const [mnDirectory, setMnDirectory] = useState<Profile[]>(() => {
+    const deleted = new Set(
+      loadFromStorage<string[]>(STORAGE_KEYS.DELETED_PROFILES, [])
+    );
+    return loadAndMergeById(
+      STORAGE_KEYS.MN_DIRECTORY,
+      INITIAL_MN_DIRECTORY
+    ).filter((p) => !deleted.has(p.id));
+  });
+  const [candidates, setCandidates] = useState<Profile[]>(() => {
+    const deleted = new Set(
+      loadFromStorage<string[]>(STORAGE_KEYS.DELETED_PROFILES, [])
+    );
+    return loadAndMergeById(
+      STORAGE_KEYS.CANDIDATES,
+      INITIAL_CANDIDATES
+    ).filter((p) => !deleted.has(p.id));
+  });
   const [evaluations, setEvaluations] = useState<Evaluation[]>(() =>
     loadAndMergeById(STORAGE_KEYS.EVALUATIONS, INITIAL_DATASET.evaluations)
   );
@@ -692,13 +712,24 @@ export function AdminStoreProvider({
       if (!Array.isArray(payload)) return;
       isApplyingRemoteRef.current = true;
       try {
-        if (key === 'mn_directory') {
+        if (key === 'deleted_profile_ids') {
+          const incomingIds = payload as string[];
+          const mergedSet = new Set([...deletedIdsRef.current, ...incomingIds]);
+          deletedIdsRef.current = mergedSet;
+          setDeletedProfileIds(Array.from(mergedSet));
+          setMnDirectory((prev) => prev.filter((p) => !mergedSet.has(p.id)));
+          setCandidates((prev) => prev.filter((p) => !mergedSet.has(p.id)));
+        } else if (key === 'mn_directory') {
           setMnDirectory((prev) =>
-            mergeProfilesSmart(prev, payload as Profile[])
+            mergeProfilesSmart(prev, payload as Profile[]).filter(
+              (p) => !deletedIdsRef.current.has(p.id)
+            )
           );
         } else if (key === 'candidates') {
           setCandidates((prev) =>
-            mergeProfilesSmart(prev, payload as Profile[])
+            mergeProfilesSmart(prev, payload as Profile[]).filter(
+              (p) => !deletedIdsRef.current.has(p.id)
+            )
           );
         } else if (key === 'evaluations') {
           setEvaluations((prev) =>
@@ -733,6 +764,16 @@ export function AdminStoreProvider({
           const remoteByKey = new Map<string, unknown>();
           for (const row of data) {
             remoteByKey.set(row.key as string, row.payload);
+          }
+          // Appliquer d'abord les profils supprimés pour qu'ils ne réapparaissent jamais
+          if (remoteByKey.has('deleted_profile_ids')) {
+            applyRemoteRow(
+              'deleted_profile_ids',
+              remoteByKey.get('deleted_profile_ids')
+            );
+          }
+          for (const row of data) {
+            if (row.key === 'deleted_profile_ids') continue;
             applyRemoteRow(row.key as string, row.payload);
           }
 
@@ -848,6 +889,20 @@ export function AdminStoreProvider({
       void pushKeyToCloud('scores', evaluationScores);
     }
   }, [evaluationScores]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        STORAGE_KEYS.DELETED_PROFILES,
+        JSON.stringify(deletedProfileIds)
+      );
+    } catch {
+      // Ignore quota errors
+    }
+    if (hasHydratedCloudRef.current) {
+      void pushKeyToCloud('deleted_profile_ids', deletedProfileIds);
+    }
+  }, [deletedProfileIds]);
 
   useEffect(() => {
     try {
@@ -1057,6 +1112,39 @@ export function AdminStoreProvider({
     setAuditLogs((prev) => [logEntry, ...prev]);
   };
 
+  const deleteProfile = (profileId: string, actorId: string): void => {
+    const target =
+      mnDirectory.find((p) => p.id === profileId) ??
+      candidates.find((p) => p.id === profileId);
+    if (!target) return;
+
+    const nowIso = new Date().toISOString();
+    const nextDeleted = Array.from(new Set([...deletedIdsRef.current, profileId]));
+    deletedIdsRef.current = new Set(nextDeleted);
+    setDeletedProfileIds(nextDeleted);
+    setMnDirectory((prev) => prev.filter((p) => p.id !== profileId));
+    setCandidates((prev) => prev.filter((p) => p.id !== profileId));
+
+    const logEntry: AuditLog = {
+      id: `audit-del-prof-${Date.now()}`,
+      actor_id: actorId,
+      entity_type: 'profiles',
+      entity_id: profileId,
+      action: 'DELETE_USER_PROFILE',
+      previous_value: {
+        first_name: target.first_name,
+        last_name: target.last_name,
+        email: target.email,
+        role: target.role,
+        febras_number: target.febras_number,
+      },
+      new_value: null,
+      reason: `Suppression administrative du profil de ${target.first_name} ${target.last_name} (${target.role})`,
+      created_at: nowIso,
+    };
+    setAuditLogs((prev) => [logEntry, ...prev]);
+  };
+
   const clearAuditLogs = (actorEmail: string, actorId: string): void => {
     if (!isCreatorAccount(actorEmail, actorId)) return;
     setAuditLogs([]);
@@ -1089,6 +1177,7 @@ export function AdminStoreProvider({
         createCandidateProfile,
         updateProfileRole,
         updateFullProfile,
+        deleteProfile,
         clearAuditLogs,
       }}
     >
