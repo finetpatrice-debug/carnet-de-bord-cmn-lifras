@@ -185,42 +185,47 @@ export function LoginPage(): React.ReactElement {
   const displayedError = localError ?? error;
 
   return (
-    <div className="relative flex min-h-[100dvh] flex-col justify-center overflow-x-hidden bg-slate-950 p-2.5 sm:p-4">
-      {/* Arrière-plan flouté immersif (PC & GSM) */}
-      <div
+    <div className="relative flex min-h-[100dvh] flex-col justify-center overflow-x-hidden bg-slate-950 p-3 sm:p-6">
+      {/* 1. PC & Tablette (md+) : Image officielle en fond d'écran plein cadre net */}
+      <img
+        src="/Cover Carnet de Bord light.jpg"
+        alt=""
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 bg-cover bg-center opacity-25 blur-sm scale-105"
-        style={{
-          backgroundImage: "url('/Cover%20Carnet%20de%20Bord%20light.jpg')",
-        }}
+        className="pointer-events-none fixed inset-0 hidden md:block h-full w-full object-cover object-center"
       />
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 bg-gradient-to-br from-slate-950/90 via-slate-900/80 to-sky-950/85"
+        className="pointer-events-none fixed inset-0 hidden md:block bg-gradient-to-br from-slate-950/65 via-slate-900/40 to-sky-950/55"
       />
 
-      {/* Conteneur principal calibré pour tenir à 100 % sans scroll sur PC et GSM */}
-      <div className="relative z-10 mx-auto w-full max-w-5xl space-y-2.5 sm:space-y-3">
-        {/* Bannière photo compacte plein cadre optimisée (zéro débordement vertical à 100 %) */}
-        <div className="relative overflow-hidden rounded-xl border border-sky-400/30 shadow-xl">
+      {/* 2. GSM (< md) : Fond sombre dégradé neutre + Bandeau photo dédié en haut */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-0 md:hidden bg-gradient-to-br from-slate-950 via-slate-900 to-sky-950"
+      />
+
+      {/* Conteneur principal centré, tenant à 100 % sans scroll */}
+      <div className="relative z-10 mx-auto w-full max-w-4xl space-y-3 md:space-y-4">
+        {/* Bandeau photo affiché UNIQUEMENT sur GSM (< md) */}
+        <div className="relative overflow-hidden rounded-xl border border-sky-400/30 shadow-xl md:hidden">
           <img
             src="/Cover Carnet de Bord light.jpg"
             alt="Moniteur National LIFRAS face à la mer — Carnet de Bord Digital CMN"
-            className="h-28 w-full object-cover object-[70%_28%] sm:h-36 md:h-40"
+            className="h-32 w-full object-cover object-[70%_28%]"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/35 to-transparent" />
-          <div className="absolute bottom-0 left-0 right-0 flex items-end justify-between gap-2 px-3 py-2 sm:px-4 sm:py-3">
+          <div className="absolute bottom-0 left-0 right-0 flex items-end justify-between gap-2 px-3 py-2">
             <div className="flex items-center gap-2.5 min-w-0">
               <img
                 src="/logo-lifras.jpg"
                 alt="Logo Officiel LIFRAS"
-                className="h-8 w-8 sm:h-10 sm:w-10 shrink-0 rounded-full border-2 border-sky-400 bg-white object-cover shadow-md"
+                className="h-9 w-9 shrink-0 rounded-full border-2 border-sky-400 bg-white object-cover shadow-md"
               />
               <div className="min-w-0">
-                <div className="truncate text-[9px] sm:text-[11px] font-extrabold uppercase tracking-wider text-sky-300">
+                <div className="truncate text-[9px] font-extrabold uppercase tracking-wider text-sky-300">
                   Commission de l’Enseignement — LIFRAS
                 </div>
-                <h1 className="truncate text-base sm:text-xl md:text-2xl font-extrabold tracking-tight text-white drop-shadow">
+                <h1 className="truncate text-base font-extrabold tracking-tight text-white drop-shadow">
                   Carnet de Bord Digital CMN
                 </h1>
               </div>
@@ -231,18 +236,35 @@ export function LoginPage(): React.ReactElement {
           </div>
         </div>
 
-        <div className="grid gap-3 md:grid-cols-2">
-          {/* Colonne Authentification, Inscription & Mot de passe oublié */}
-          <Card className="border-slate-700/60 bg-white/95 backdrop-blur shadow-xl">
-            <CardHeader className="space-y-1.5 p-3.5 sm:p-4 pb-2">
-              <div className="flex items-center justify-between gap-2">
-                <CardTitle className="text-base sm:text-lg text-slate-900">
-                  Connexion & Inscription
-                </CardTitle>
-                <Badge variant="secondary" className="font-mono text-[11px]">
-                  {APP_VERSION}
-                </Badge>
+        {/* En-tête léger flottant sur le fond d'écran, affiché UNIQUEMENT sur PC (md+) */}
+        <div className="hidden md:flex items-center justify-between gap-3 px-1">
+          <div className="flex items-center gap-3 min-w-0">
+            <img
+              src="/logo-lifras.jpg"
+              alt="Logo Officiel LIFRAS"
+              className="h-12 w-12 shrink-0 rounded-full border-2 border-sky-400 bg-white object-cover shadow-lg"
+            />
+            <div className="min-w-0">
+              <div className="truncate text-xs font-extrabold uppercase tracking-wider text-sky-300 drop-shadow">
+                Commission de l’Enseignement — LIFRAS
               </div>
+              <h1 className="truncate text-2xl font-extrabold tracking-tight text-white drop-shadow-md">
+                Carnet de Bord Digital CMN
+              </h1>
+            </div>
+          </div>
+          <Badge className="shrink-0 border border-emerald-400/60 bg-slate-950/70 font-mono text-xs text-emerald-200 backdrop-blur-md">
+            {APP_VERSION}
+          </Badge>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          {/* Colonne Authentification, Inscription & Mot de passe oublié (effet verre translucide) */}
+          <Card className="border-white/30 bg-white/90 backdrop-blur-md shadow-2xl">
+            <CardHeader className="space-y-1.5 p-4 pb-2">
+              <CardTitle className="text-lg text-slate-900">
+                Connexion & Inscription
+              </CardTitle>
               <CardDescription className="text-xs">
               {mode === 'SIGN_IN' &&
                 'Portail officiel sécurisé de suivi du cursus Candidat Moniteur National.'}
@@ -641,7 +663,7 @@ export function LoginPage(): React.ReactElement {
         </Card>
 
         {/* Colonne Simulateur des 3 Rôles Réglementaires */}
-        <Card className="border-sky-800/40 bg-slate-900/90 text-slate-100">
+        <Card className="border-sky-400/30 bg-slate-950/75 text-slate-100 backdrop-blur-md shadow-2xl">
           <CardHeader className="space-y-1 p-3.5 sm:p-4 pb-2">
             <div className="flex items-center justify-between">
               <Badge variant="secondary" className="bg-sky-500/20 text-sky-300 text-[11px]">
