@@ -188,7 +188,7 @@ export function LoginPage(): React.ReactElement {
     <div className="relative flex min-h-[100dvh] flex-col justify-between overflow-x-hidden bg-slate-950 p-3 sm:p-5 md:px-10 md:py-4 lg:px-14">
       {/* 1. PC & Tablette (md+) : Image officielle en fond d'écran plein cadre net (plongeur parfaitement dégagé à droite) */}
       <img
-        src="/Cover Carnet de Bord light.jpg"
+        src="/Cover Carnet de Bord light.jpg?v=1.7.8"
         alt=""
         aria-hidden="true"
         className="pointer-events-none fixed inset-0 hidden md:block h-full w-full object-cover object-right"
@@ -231,7 +231,7 @@ export function LoginPage(): React.ReactElement {
         {/* Bandeau photo affiché UNIQUEMENT sur GSM (< md) */}
         <div className="relative overflow-hidden rounded-xl border border-sky-400/30 shadow-xl md:hidden">
           <img
-            src="/Cover Carnet de Bord light.jpg"
+            src="/Cover Carnet de Bord light.jpg?v=1.7.8"
             alt="Moniteur National LIFRAS face à la mer — Carnet de Bord Digital CMN"
             className="h-32 w-full object-cover object-[70%_28%]"
           />
