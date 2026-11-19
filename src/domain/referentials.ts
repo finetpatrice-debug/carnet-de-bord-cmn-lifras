@@ -1,6 +1,6 @@
 import type { Criterion, ExamCode, ExamType, Pillar, PillarCode } from './types';
 
-export const APP_VERSION = 'v1.7.1';
+export const APP_VERSION = 'v1.7.2';
 
 export const OFFICIAL_PILLARS: Pillar[] = [
   {

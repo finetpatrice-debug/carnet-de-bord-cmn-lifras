@@ -185,7 +185,7 @@ export function LoginPage(): React.ReactElement {
   const displayedError = localError ?? error;
 
   return (
-    <div className="relative flex min-h-screen flex-col justify-center overflow-hidden bg-slate-950 p-3 sm:p-6 lg:p-10">
+    <div className="relative flex min-h-[100dvh] flex-col justify-center overflow-x-hidden bg-slate-950 p-2.5 sm:p-4">
       {/* Arrière-plan flouté immersif (PC & GSM) */}
       <div
         aria-hidden="true"
@@ -199,61 +199,51 @@ export function LoginPage(): React.ReactElement {
         className="pointer-events-none absolute inset-0 bg-gradient-to-br from-slate-950/90 via-slate-900/80 to-sky-950/85"
       />
 
-      {/* Conteneur principal avec photo de couverture redimensionnée pour GSM (bannière haute) et PC (colonne visuelle) */}
-      <div className="relative z-10 mx-auto w-full max-w-5xl space-y-4 md:space-y-6">
-        {/* Bannière photo plein cadre optimisée sur GSM & Tablette (< md) et bandeau panoramique sur PC */}
-        <div className="relative overflow-hidden rounded-2xl border border-sky-400/30 shadow-2xl">
+      {/* Conteneur principal calibré pour tenir à 100 % sans scroll sur PC et GSM */}
+      <div className="relative z-10 mx-auto w-full max-w-5xl space-y-2.5 sm:space-y-3">
+        {/* Bannière photo compacte plein cadre optimisée (zéro débordement vertical à 100 %) */}
+        <div className="relative overflow-hidden rounded-xl border border-sky-400/30 shadow-xl">
           <img
             src="/Cover Carnet de Bord light.jpg"
             alt="Moniteur National LIFRAS face à la mer — Carnet de Bord Digital CMN"
-            className="h-44 w-full object-cover object-[70%_30%] sm:h-56 md:h-64 lg:h-72"
+            className="h-28 w-full object-cover object-[70%_28%] sm:h-36 md:h-40"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/35 to-transparent" />
-          <div className="absolute bottom-0 left-0 right-0 flex flex-wrap items-end justify-between gap-2 p-3.5 sm:p-5">
-            <div className="flex items-center gap-3">
+          <div className="absolute bottom-0 left-0 right-0 flex items-end justify-between gap-2 px-3 py-2 sm:px-4 sm:py-3">
+            <div className="flex items-center gap-2.5 min-w-0">
               <img
                 src="/logo-lifras.jpg"
                 alt="Logo Officiel LIFRAS"
-                className="h-10 w-10 sm:h-12 sm:w-12 shrink-0 rounded-full border-2 border-sky-400 bg-white object-cover shadow-md"
+                className="h-8 w-8 sm:h-10 sm:w-10 shrink-0 rounded-full border-2 border-sky-400 bg-white object-cover shadow-md"
               />
-              <div>
-                <div className="text-[10px] sm:text-xs font-extrabold uppercase tracking-wider text-sky-300">
-                  Ligue Francophone de Recherches et d’Activités Sous-Marines
+              <div className="min-w-0">
+                <div className="truncate text-[9px] sm:text-[11px] font-extrabold uppercase tracking-wider text-sky-300">
+                  Commission de l’Enseignement — LIFRAS
                 </div>
-                <h1 className="text-lg sm:text-2xl md:text-3xl font-extrabold tracking-tight text-white drop-shadow">
+                <h1 className="truncate text-base sm:text-xl md:text-2xl font-extrabold tracking-tight text-white drop-shadow">
                   Carnet de Bord Digital CMN
                 </h1>
               </div>
             </div>
-            <Badge className="border border-emerald-400/50 bg-emerald-500/25 font-mono text-xs text-emerald-200 backdrop-blur-sm">
+            <Badge className="shrink-0 border border-emerald-400/50 bg-emerald-500/25 font-mono text-[11px] text-emerald-200 backdrop-blur-sm">
               {APP_VERSION}
             </Badge>
           </div>
         </div>
 
-        <div className="grid gap-5 md:grid-cols-2">
+        <div className="grid gap-3 md:grid-cols-2">
           {/* Colonne Authentification, Inscription & Mot de passe oublié */}
           <Card className="border-slate-700/60 bg-white/95 backdrop-blur shadow-xl">
-            <CardHeader className="space-y-2 pb-3">
-              <div className="flex items-center justify-between gap-2 text-sky-700">
-                <div className="flex items-center gap-2">
-                  <img
-                    src="/logo-lifras.jpg"
-                    alt="Logo Officiel LIFRAS"
-                    className="h-7 w-7 rounded-full object-cover shadow-sm"
-                  />
-                  <span className="text-xs font-bold uppercase tracking-wider">
-                    Commission de l’Enseignement — LIFRAS
-                  </span>
-                </div>
-                <Badge variant="secondary" className="font-mono text-xs">
+            <CardHeader className="space-y-1.5 p-3.5 sm:p-4 pb-2">
+              <div className="flex items-center justify-between gap-2">
+                <CardTitle className="text-base sm:text-lg text-slate-900">
+                  Connexion & Inscription
+                </CardTitle>
+                <Badge variant="secondary" className="font-mono text-[11px]">
                   {APP_VERSION}
                 </Badge>
               </div>
-              <CardTitle className="text-xl sm:text-2xl text-slate-900">
-                Connexion & Inscription
-              </CardTitle>
-            <CardDescription>
+              <CardDescription className="text-xs">
               {mode === 'SIGN_IN' &&
                 'Portail officiel sécurisé de suivi du cursus Candidat Moniteur National.'}
               {mode === 'SIGN_UP' &&
@@ -263,11 +253,11 @@ export function LoginPage(): React.ReactElement {
             </CardDescription>
 
             {/* Onglets rapides Se connecter / S'inscrire */}
-            <div className="grid grid-cols-2 gap-1.5 rounded-lg bg-slate-100 p-1 pt-1">
+            <div className="grid grid-cols-2 gap-1 rounded-lg bg-slate-100 p-1">
               <button
                 type="button"
                 onClick={() => switchMode('SIGN_IN')}
-                className={`flex items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-bold transition ${
+                className={`flex items-center justify-center gap-1.5 rounded-md py-1 text-xs font-bold transition ${
                   mode === 'SIGN_IN'
                     ? 'bg-white text-sky-800 shadow-sm'
                     : 'text-slate-600 hover:text-slate-900'
@@ -279,7 +269,7 @@ export function LoginPage(): React.ReactElement {
               <button
                 type="button"
                 onClick={() => switchMode('SIGN_UP')}
-                className={`flex items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-bold transition ${
+                className={`flex items-center justify-center gap-1.5 rounded-md py-1 text-xs font-bold transition ${
                   mode === 'SIGN_UP'
                     ? 'bg-white text-sky-800 shadow-sm'
                     : 'text-slate-600 hover:text-slate-900'
@@ -291,23 +281,23 @@ export function LoginPage(): React.ReactElement {
             </div>
           </CardHeader>
 
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3 p-3.5 sm:p-4 pt-2">
             {infoMessage && (
-              <div className="flex items-start gap-2 rounded-md border border-emerald-300 bg-emerald-50 p-3 text-xs text-emerald-900">
+              <div className="flex items-start gap-2 rounded-md border border-emerald-300 bg-emerald-50 p-2.5 text-xs text-emerald-900">
                 <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
                 <span>{infoMessage}</span>
               </div>
             )}
 
             {displayedError && (
-              <div className="rounded-md border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+              <div className="rounded-md border border-red-200 bg-red-50 p-2.5 text-xs text-red-700">
                 {displayedError}
               </div>
             )}
 
             {/* 1. MODE CONNEXION */}
             {mode === 'SIGN_IN' && (
-              <form onSubmit={(e) => void handleSignInSubmit(e)} className="space-y-4">
+              <form onSubmit={(e) => void handleSignInSubmit(e)} className="space-y-2.5">
                 <div className="space-y-1.5">
                   <label
                     htmlFor="email"
@@ -652,28 +642,28 @@ export function LoginPage(): React.ReactElement {
 
         {/* Colonne Simulateur des 3 Rôles Réglementaires */}
         <Card className="border-sky-800/40 bg-slate-900/90 text-slate-100">
-          <CardHeader>
+          <CardHeader className="space-y-1 p-3.5 sm:p-4 pb-2">
             <div className="flex items-center justify-between">
-              <Badge variant="secondary" className="bg-sky-500/20 text-sky-300">
+              <Badge variant="secondary" className="bg-sky-500/20 text-sky-300 text-[11px]">
                 Contrôle RBAC & RLS
               </Badge>
-              <ShieldCheck className="h-5 w-5 text-sky-400" />
+              <ShieldCheck className="h-4 w-4 text-sky-400" />
             </div>
-            <CardTitle className="text-lg text-white">
+            <CardTitle className="text-base text-white">
               Accès rapide par Rôle Réglementaire
             </CardTitle>
-            <CardDescription className="text-slate-300">
+            <CardDescription className="text-xs text-slate-300">
               Testez immédiatement le layout protégé et le cloisonnement des 3 rôles
               du cursus Candidat Moniteur National.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-2 p-3.5 sm:p-4 pt-2">
             {ROLES_LIST.map((role) => (
               <button
                 key={role}
                 type="button"
                 onClick={() => handleDemoLogin(role)}
-                className="flex w-full items-center justify-between rounded-lg border border-slate-700 bg-slate-800/70 px-4 py-3 text-left transition hover:border-sky-400 hover:bg-slate-800"
+                className="flex w-full items-center justify-between rounded-lg border border-slate-700 bg-slate-800/70 px-3.5 py-2.5 text-left transition hover:border-sky-400 hover:bg-slate-800"
               >
                 <div>
                   <div className="text-sm font-semibold text-white">
