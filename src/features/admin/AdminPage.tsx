@@ -795,240 +795,274 @@ export function AdminPage(): React.ReactElement {
         </CardHeader>
         <CardContent className="space-y-4">
           {editingProfile && (
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                updateFullProfile(editingProfile, activeAdmin?.id ?? 'admin-dtf');
-                setCandidateCreatedMsg(
-                  `Profil de ${editingProfile.first_name} ${editingProfile.last_name} (${USER_ROLE_LABELS[editingProfile.role]}) mis à jour.`
-                );
-                setEditingProfile(null);
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label={`Modification du profil ${editingProfile.first_name} ${editingProfile.last_name}`}
+              onClick={(e) => {
+                if (e.target === e.currentTarget) {
+                  setEditingProfile(null);
+                }
               }}
-              className="rounded-xl border-2 border-sky-400 bg-sky-50/70 p-4 space-y-3"
+              className="fixed inset-0 z-50 flex items-stretch sm:items-center justify-center bg-slate-900/75 p-0 sm:p-6 backdrop-blur-sm"
             >
-              <div className="flex items-center justify-between">
-                <div className="text-sm font-bold text-sky-900">
-                  Modification du profil : {editingProfile.first_name}{' '}
-                  {editingProfile.last_name}
-                </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setEditingProfile(null)}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-3">
-                <div>
-                  <label className="text-xs font-semibold text-slate-700">
-                    Prénom
-                  </label>
-                  <Input
-                    value={editingProfile.first_name}
-                    onChange={(e) =>
-                      setEditingProfile({
-                        ...editingProfile,
-                        first_name: e.target.value,
-                      })
-                    }
-                    className="mt-1 bg-white"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-slate-700">
-                    Nom
-                  </label>
-                  <Input
-                    value={editingProfile.last_name}
-                    onChange={(e) =>
-                      setEditingProfile({
-                        ...editingProfile,
-                        last_name: e.target.value,
-                      })
-                    }
-                    className="mt-1 bg-white"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-slate-700">
-                    Rôle / Habilitation
-                  </label>
-                  <select
-                    aria-label="Rôle du profil"
-                    value={editingProfile.role}
-                    onChange={(e) =>
-                      setEditingProfile({
-                        ...editingProfile,
-                        role: e.target.value as UserRole,
-                      })
-                    }
-                    className="mt-1 flex h-9 w-full rounded-md border border-sky-300 bg-white px-3 text-xs font-bold text-slate-900"
-                  >
-                    {(
-                      [
-                        'ADMIN_DTF',
-                        'MN_EVALUATOR',
-                        'CMN_CANDIDATE',
-                      ] as UserRole[]
-                    ).map((r) => (
-                      <option key={r} value={r}>
-                        {USER_ROLE_LABELS[r]}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-slate-700">
-                    E-mail
-                  </label>
-                  <Input
-                    type="email"
-                    value={editingProfile.email}
-                    onChange={(e) =>
-                      setEditingProfile({
-                        ...editingProfile,
-                        email: e.target.value,
-                      })
-                    }
-                    className="mt-1 bg-white"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-slate-700">
-                    N° FEBRAS (TEXT)
-                  </label>
-                  <Input
-                    value={editingProfile.febras_number ?? ''}
-                    onChange={(e) =>
-                      setEditingProfile({
-                        ...editingProfile,
-                        febras_number: e.target.value,
-                      })
-                    }
-                    className="mt-1 bg-white font-mono"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-slate-700">
-                    Téléphone GSM (TEXT)
-                  </label>
-                  <Input
-                    placeholder="Ex: 0475123456"
-                    value={editingProfile.phone_gsm ?? ''}
-                    onChange={(e) =>
-                      setEditingProfile({
-                        ...editingProfile,
-                        phone_gsm: e.target.value,
-                      })
-                    }
-                    className="mt-1 bg-white font-mono"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-slate-700">
-                    Téléphone fixe (TEXT)
-                  </label>
-                  <Input
-                    placeholder="Ex: 010223344"
-                    value={editingProfile.phone_landline ?? ''}
-                    onChange={(e) =>
-                      setEditingProfile({
-                        ...editingProfile,
-                        phone_landline: e.target.value,
-                      })
-                    }
-                    className="mt-1 bg-white font-mono"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-slate-700">
-                    Club affilié
-                  </label>
-                  <Input
-                    value={editingProfile.club_name ?? ''}
-                    onChange={(e) =>
-                      setEditingProfile({
-                        ...editingProfile,
-                        club_name: e.target.value,
-                      })
-                    }
-                    className="mt-1 bg-white"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-slate-700">
-                    Nombre de plongées
-                  </label>
-                  <Input
-                    type="number"
-                    value={editingProfile.dives_count ?? 0}
-                    onChange={(e) =>
-                      setEditingProfile({
-                        ...editingProfile,
-                        dives_count: Number.parseInt(e.target.value, 10) || 0,
-                      })
-                    }
-                    className="mt-1 bg-white"
-                  />
-                </div>
-                <div className="sm:col-span-3">
-                  <label className="text-xs font-semibold text-slate-700">
-                    Photo du profil (Tous les profils : CMN, MN, Administrateur)
-                  </label>
-                  <div className="mt-1 flex flex-wrap items-center gap-3">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  updateFullProfile(editingProfile, activeAdmin?.id ?? 'admin-dtf');
+                  setCandidateCreatedMsg(
+                    `Profil de ${editingProfile.first_name} ${editingProfile.last_name} (${USER_ROLE_LABELS[editingProfile.role]}) mis à jour.`
+                  );
+                  setEditingProfile(null);
+                }}
+                className="flex h-full w-full flex-col bg-white shadow-2xl sm:h-auto sm:max-h-[92vh] sm:max-w-3xl sm:rounded-2xl sm:border sm:border-sky-300 overflow-hidden"
+              >
+                <div className="flex shrink-0 items-center justify-between border-b bg-slate-900 px-4 py-3.5 text-white sm:px-6">
+                  <div className="flex items-center gap-3 min-w-0">
                     {editingProfile.photo_storage_path ? (
                       <img
                         src={editingProfile.photo_storage_path}
                         alt={`${editingProfile.first_name} ${editingProfile.last_name}`}
-                        className="h-12 w-12 rounded-full border-2 border-sky-500 object-cover shadow-sm"
+                        className="h-9 w-9 shrink-0 rounded-full border-2 border-sky-400 object-cover"
                       />
                     ) : (
-                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-200 text-xs font-bold text-slate-700">
-                        <Camera className="h-5 w-5 text-slate-500" />
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sky-700 text-xs font-bold text-white">
+                        {`${editingProfile.first_name.charAt(0)}${editingProfile.last_name.charAt(0)}`.toUpperCase()}
                       </div>
                     )}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      aria-label="Modifier la photo du profil"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          handlePhotoFileToDataUrl(file, (dataUrl) => {
-                            setEditingProfile((prev) =>
-                              prev
-                                ? { ...prev, photo_storage_path: dataUrl }
-                                : null
-                            );
-                          });
+                    <div className="min-w-0">
+                      <div className="truncate text-sm sm:text-base font-bold text-white">
+                        Modification du profil : {editingProfile.first_name}{' '}
+                        {editingProfile.last_name}
+                      </div>
+                      <div className="text-[11px] text-sky-300">
+                        {USER_ROLE_LABELS[editingProfile.role]}
+                      </div>
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    aria-label="Fermer la fenêtre de modification"
+                    onClick={() => setEditingProfile(null)}
+                    className="shrink-0 text-slate-200 hover:bg-slate-800 hover:text-white"
+                  >
+                    <X className="h-5 w-5" />
+                  </Button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    <div>
+                      <label className="text-xs font-semibold text-slate-700">
+                        Prénom
+                      </label>
+                      <Input
+                        value={editingProfile.first_name}
+                        onChange={(e) =>
+                          setEditingProfile({
+                            ...editingProfile,
+                            first_name: e.target.value,
+                          })
                         }
-                      }}
-                      className="text-xs text-slate-600 file:mr-2 file:rounded-md file:border-0 file:bg-sky-600 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white hover:file:bg-sky-700"
-                    />
+                        className="mt-1 bg-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-slate-700">
+                        Nom
+                      </label>
+                      <Input
+                        value={editingProfile.last_name}
+                        onChange={(e) =>
+                          setEditingProfile({
+                            ...editingProfile,
+                            last_name: e.target.value,
+                          })
+                        }
+                        className="mt-1 bg-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-slate-700">
+                        Rôle / Habilitation
+                      </label>
+                      <select
+                        aria-label="Rôle du profil"
+                        value={editingProfile.role}
+                        onChange={(e) =>
+                          setEditingProfile({
+                            ...editingProfile,
+                            role: e.target.value as UserRole,
+                          })
+                        }
+                        className="mt-1 flex h-9 w-full rounded-md border border-sky-300 bg-white px-3 text-xs font-bold text-slate-900"
+                      >
+                        {(
+                          [
+                            'ADMIN_DTF',
+                            'MN_EVALUATOR',
+                            'CMN_CANDIDATE',
+                          ] as UserRole[]
+                        ).map((r) => (
+                          <option key={r} value={r}>
+                            {USER_ROLE_LABELS[r]}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-slate-700">
+                        E-mail
+                      </label>
+                      <Input
+                        type="email"
+                        value={editingProfile.email}
+                        onChange={(e) =>
+                          setEditingProfile({
+                            ...editingProfile,
+                            email: e.target.value,
+                          })
+                        }
+                        className="mt-1 bg-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-slate-700">
+                        N° FEBRAS (TEXT)
+                      </label>
+                      <Input
+                        value={editingProfile.febras_number ?? ''}
+                        onChange={(e) =>
+                          setEditingProfile({
+                            ...editingProfile,
+                            febras_number: e.target.value,
+                          })
+                        }
+                        className="mt-1 bg-white font-mono"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-slate-700">
+                        Téléphone GSM (TEXT)
+                      </label>
+                      <Input
+                        placeholder="Ex: 0475123456"
+                        value={editingProfile.phone_gsm ?? ''}
+                        onChange={(e) =>
+                          setEditingProfile({
+                            ...editingProfile,
+                            phone_gsm: e.target.value,
+                          })
+                        }
+                        className="mt-1 bg-white font-mono"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-slate-700">
+                        Téléphone fixe (TEXT)
+                      </label>
+                      <Input
+                        placeholder="Ex: 010223344"
+                        value={editingProfile.phone_landline ?? ''}
+                        onChange={(e) =>
+                          setEditingProfile({
+                            ...editingProfile,
+                            phone_landline: e.target.value,
+                          })
+                        }
+                        className="mt-1 bg-white font-mono"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-slate-700">
+                        Club affilié
+                      </label>
+                      <Input
+                        value={editingProfile.club_name ?? ''}
+                        onChange={(e) =>
+                          setEditingProfile({
+                            ...editingProfile,
+                            club_name: e.target.value,
+                          })
+                        }
+                        className="mt-1 bg-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-slate-700">
+                        Nombre de plongées
+                      </label>
+                      <Input
+                        type="number"
+                        value={editingProfile.dives_count ?? 0}
+                        onChange={(e) =>
+                          setEditingProfile({
+                            ...editingProfile,
+                            dives_count: Number.parseInt(e.target.value, 10) || 0,
+                          })
+                        }
+                        className="mt-1 bg-white"
+                      />
+                    </div>
+                    <div className="sm:col-span-2 lg:col-span-3 rounded-xl border border-slate-200 bg-slate-50 p-3.5">
+                      <label className="text-xs font-semibold text-slate-700">
+                        Photo du profil (Tous les profils : CMN, MN, Administrateur)
+                      </label>
+                      <div className="mt-2 flex flex-wrap items-center gap-3">
+                        {editingProfile.photo_storage_path ? (
+                          <img
+                            src={editingProfile.photo_storage_path}
+                            alt={`${editingProfile.first_name} ${editingProfile.last_name}`}
+                            className="h-14 w-14 rounded-full border-2 border-sky-500 object-cover shadow-sm"
+                          />
+                        ) : (
+                          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-200 text-xs font-bold text-slate-700">
+                            <Camera className="h-5 w-5 text-slate-500" />
+                          </div>
+                        )}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          aria-label="Modifier la photo du profil"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              handlePhotoFileToDataUrl(file, (dataUrl) => {
+                                setEditingProfile((prev) =>
+                                  prev
+                                    ? { ...prev, photo_storage_path: dataUrl }
+                                    : null
+                                );
+                              });
+                            }
+                          }}
+                          className="text-xs text-slate-600 file:mr-2 file:rounded-md file:border-0 file:bg-sky-600 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white hover:file:bg-sky-700"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setEditingProfile(null)}
-                >
-                  Annuler
-                </Button>
-                <Button
-                  type="submit"
-                  size="sm"
-                  className="bg-emerald-600 text-white hover:bg-emerald-700"
-                >
-                  <CheckCircle2 className="h-4 w-4" />
-                  Enregistrer les modifications
-                </Button>
-              </div>
-            </form>
+
+                <div className="flex shrink-0 items-center justify-end gap-2 border-t bg-slate-50 px-4 py-3 sm:px-6">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setEditingProfile(null)}
+                  >
+                    Annuler
+                  </Button>
+                  <Button
+                    type="submit"
+                    className="bg-emerald-600 text-white hover:bg-emerald-700"
+                  >
+                    <CheckCircle2 className="h-4 w-4" />
+                    Enregistrer les modifications
+                  </Button>
+                </div>
+              </form>
+            </div>
           )}
 
           <div className="grid gap-4 md:grid-cols-2">
