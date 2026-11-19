@@ -39,6 +39,7 @@ import {
   ClipboardCheck,
   Mic,
   MicOff,
+  RotateCcw,
   Send,
   UserCheck,
   Users,
@@ -280,10 +281,39 @@ export function EvaluationPage(): React.ReactElement {
   };
 
   const handleSelectGrade = (criterionId: number, grade: GradeCode): void => {
-    setGradesByCriterion((prev) => ({
-      ...prev,
-      [criterionId]: grade,
-    }));
+    setGradesByCriterion((prev) => {
+      // Un second clic sur la note déjà active la décoche (reset rapide)
+      if (prev[criterionId] === grade) {
+        const next = { ...prev };
+        delete next[criterionId];
+        return next;
+      }
+      return {
+        ...prev,
+        [criterionId]: grade,
+      };
+    });
+  };
+
+  const handleClearGrade = (criterionId: number): void => {
+    setGradesByCriterion((prev) => {
+      const next = { ...prev };
+      delete next[criterionId];
+      return next;
+    });
+  };
+
+  const handleResetAllGrades = (): void => {
+    if (
+      answeredQuestionsCount > 0 &&
+      !window.confirm(
+        'Voulez-vous vraiment réinitialiser toutes les cotations de cette épreuve ?'
+      )
+    ) {
+      return;
+    }
+    setGradesByCriterion({});
+    setSubmissionFeedback(null);
   };
 
   // Auto-complétion stricte des co-examinateurs MN (zéro texte libre)
@@ -397,6 +427,17 @@ export function EvaluationPage(): React.ReactElement {
             <Badge variant="secondary" className="font-mono text-xs">
               Moyenne Iso-Excel : {liveExamAveragePreview.formattedAverage}
             </Badge>
+            {answeredQuestionsCount > 0 && (
+              <button
+                type="button"
+                onClick={handleResetAllGrades}
+                title="Réinitialiser toutes les cotations de cette grille"
+                className="flex items-center gap-1 rounded-md border border-red-200 bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-red-700 transition hover:bg-red-100"
+              >
+                <RotateCcw className="h-3 w-3" />
+                <span>Reset grille</span>
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setSimulateOffline((prev) => !prev)}
@@ -719,9 +760,20 @@ export function EvaluationPage(): React.ReactElement {
                           {criterion.question_text}
                         </p>
                         {selectedGrade ? (
-                          <Badge className="shrink-0 bg-slate-800 text-white">
-                            {GRADE_LABELS[selectedGrade]}
-                          </Badge>
+                          <div className="flex shrink-0 items-center gap-1">
+                            <Badge className="bg-slate-800 text-white">
+                              {GRADE_LABELS[selectedGrade]}
+                            </Badge>
+                            <button
+                              type="button"
+                              onClick={() => handleClearGrade(criterion.id)}
+                              title="Annuler cette cotation (remettre À coter)"
+                              aria-label={`Annuler la cotation de la question ${criterion.excel_col}`}
+                              className="flex h-6 w-6 items-center justify-center rounded-md border border-slate-300 bg-slate-100 text-slate-600 transition hover:border-red-300 hover:bg-red-50 hover:text-red-700"
+                            >
+                              <RotateCcw className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
                         ) : (
                           <Badge
                             variant="outline"
