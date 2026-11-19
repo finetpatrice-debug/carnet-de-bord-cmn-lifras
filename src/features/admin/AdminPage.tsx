@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/features/auth/AuthContext';
-import { useAdminStore } from './AdminStoreContext';
+import { isCreatorAccount, useAdminStore } from './AdminStoreContext';
 import {
   buildCriterionMappingProposals,
   executeExamReclassification,
@@ -37,6 +37,7 @@ import {
   Minimize2,
   Plus,
   Shield,
+  Trash2,
   UserPlus,
   Users,
   X,
@@ -57,7 +58,10 @@ export function AdminPage(): React.ReactElement {
     createCandidateProfile,
     updateProfileRole,
     updateFullProfile,
+    clearAuditLogs,
   } = useAdminStore();
+
+  const isCreator = isCreatorAccount(activeAdmin?.email, activeAdmin?.id);
 
   const [editingProfile, setEditingProfile] = useState<Profile | null>(null);
 
@@ -1243,6 +1247,31 @@ export function AdminPage(): React.ReactElement {
                       Agrandir
                     </>
                   )}
+                </Button>
+              )}
+              {isCreator && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="destructive"
+                  disabled={auditLogs.length === 0}
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        "Confirmer la remise à zéro définitive du Journal d'Audit (action réservée exclusivement au concepteur Patrice Finet) ?"
+                      )
+                    ) {
+                      clearAuditLogs(
+                        activeAdmin?.email ?? '',
+                        activeAdmin?.id ?? ''
+                      );
+                    }
+                  }}
+                  title="Remettre à zéro le Journal d'Audit (réservé au concepteur)"
+                  className="h-7 px-2.5 text-xs"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Remettre à zéro
                 </Button>
               )}
             </div>

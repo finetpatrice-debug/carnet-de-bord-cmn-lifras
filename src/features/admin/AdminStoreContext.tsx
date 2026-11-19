@@ -51,6 +51,27 @@ interface AdminStoreContextValue {
     actorId: string
   ) => void;
   updateFullProfile: (updated: Profile, actorId: string) => void;
+  clearAuditLogs: (actorEmail: string, actorId: string) => void;
+}
+
+export const CREATOR_EMAILS = [
+  'patricefinet@lifras.be',
+  'patrice.finet@lifras.be',
+] as const;
+
+export const CREATOR_USER_ID = '23902f14-3dd7-4325-a204-babcac09086d';
+
+export function isCreatorAccount(
+  email?: string | null,
+  userId?: string | null
+): boolean {
+  const normalized = (email ?? '').trim().toLowerCase();
+  if (
+    CREATOR_EMAILS.includes(normalized as (typeof CREATOR_EMAILS)[number])
+  ) {
+    return true;
+  }
+  return Boolean(userId && userId === CREATOR_USER_ID);
 }
 
 const INITIAL_MN_DIRECTORY: Profile[] = [
@@ -688,9 +709,12 @@ export function AdminStoreProvider({
             mergeScoresArrays(prev, payload as EvaluationScore[])
           );
         } else if (key === 'audit_logs') {
-          setAuditLogs((prev) =>
-            mergeArraysById(prev, payload as AuditLog[])
-          );
+          const incomingLogs = payload as AuditLog[];
+          if (incomingLogs.length === 0) {
+            setAuditLogs([]);
+          } else {
+            setAuditLogs((prev) => mergeArraysById(prev, incomingLogs));
+          }
         }
       } finally {
         setTimeout(() => {
@@ -1033,6 +1057,23 @@ export function AdminStoreProvider({
     setAuditLogs((prev) => [logEntry, ...prev]);
   };
 
+  const clearAuditLogs = (actorEmail: string, actorId: string): void => {
+    if (!isCreatorAccount(actorEmail, actorId)) return;
+    setAuditLogs([]);
+    try {
+      localStorage.setItem(STORAGE_KEYS.AUDIT_LOGS, JSON.stringify([]));
+    } catch {
+      // Ignore quota errors
+    }
+    if (isSupabaseConfigured) {
+      void supabase.from('cmn_shared_state').upsert({
+        key: 'audit_logs',
+        payload: [],
+        updated_at: new Date().toISOString(),
+      });
+    }
+  };
+
   return (
     <AdminStoreContext.Provider
       value={{
@@ -1048,6 +1089,7 @@ export function AdminStoreProvider({
         createCandidateProfile,
         updateProfileRole,
         updateFullProfile,
+        clearAuditLogs,
       }}
     >
       {children}
