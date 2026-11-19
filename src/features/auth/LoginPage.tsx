@@ -185,7 +185,7 @@ export function LoginPage(): React.ReactElement {
   const displayedError = localError ?? error;
 
   return (
-    <div className="relative flex min-h-[100dvh] flex-col justify-start md:justify-start overflow-x-hidden bg-slate-950 p-3 sm:p-5 md:pl-10 md:pt-5 lg:pl-14 lg:pt-6">
+    <div className="relative flex min-h-[100dvh] flex-col justify-between overflow-x-hidden bg-slate-950 p-3 sm:p-5 md:px-10 md:py-4 lg:px-14">
       {/* 1. PC & Tablette (md+) : Image officielle en fond d'écran plein cadre net (plongeur parfaitement dégagé à droite) */}
       <img
         src="/Cover Carnet de Bord light.jpg"
@@ -204,8 +204,30 @@ export function LoginPage(): React.ReactElement {
         className="pointer-events-none fixed inset-0 md:hidden bg-gradient-to-br from-slate-950 via-slate-900 to-sky-950"
       />
 
-      {/* Conteneur principal : centré sur GSM, calé en haut à gauche (colonne unique) sur PC pour dégager entièrement le plongeur à droite */}
-      <div className="relative z-10 mx-auto md:mx-0 w-full max-w-md lg:max-w-[440px] space-y-2.5 md:space-y-3">
+      {/* En-tête agrandi, remonté tout en haut à gauche sur PC (md+) avec "COMMISSION DE L'ENSEIGNEMENT — LIFRAS" sur 1 ligne */}
+      <div className="relative z-10 hidden md:flex items-center gap-4 pt-1">
+        <img
+          src="/logo-lifras.jpg"
+          alt="Logo Officiel LIFRAS"
+          className="h-16 w-16 shrink-0 rounded-full border-2 border-sky-400 bg-white object-cover shadow-xl"
+        />
+        <div>
+          <div className="whitespace-nowrap text-xs font-extrabold uppercase tracking-wider text-sky-300 drop-shadow">
+            Commission de l’Enseignement — LIFRAS
+          </div>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-extrabold leading-tight tracking-tight text-white drop-shadow-md">
+              Carnet de Bord Digital CMN
+            </h1>
+            <Badge className="shrink-0 border border-emerald-400/60 bg-slate-950/75 font-mono text-xs text-emerald-200 backdrop-blur-md">
+              {APP_VERSION}
+            </Badge>
+          </div>
+        </div>
+      </div>
+
+      {/* Conteneur principal : centré sur GSM, recentré verticalement (entre le haut et le bas) et équilibré entre bord gauche et plongeur sur PC */}
+      <div className="relative z-10 mx-auto md:mx-0 md:my-auto md:ml-[6%] lg:ml-[9%] xl:ml-[11%] w-full max-w-md lg:max-w-[440px] space-y-2.5 md:space-y-3 py-2">
         {/* Bandeau photo affiché UNIQUEMENT sur GSM (< md) */}
         <div className="relative overflow-hidden rounded-xl border border-sky-400/30 shadow-xl md:hidden">
           <img
@@ -236,37 +258,15 @@ export function LoginPage(): React.ReactElement {
           </div>
         </div>
 
-        {/* En-tête agrandi, remonté en haut à gauche sur PC (md+) */}
-        <div className="hidden md:flex items-center justify-between gap-3 px-0.5 pb-0.5">
-          <div className="flex items-center gap-3.5 min-w-0">
-            <img
-              src="/logo-lifras.jpg"
-              alt="Logo Officiel LIFRAS"
-              className="h-16 w-16 shrink-0 rounded-full border-2 border-sky-400 bg-white object-cover shadow-xl"
-            />
-            <div className="min-w-0">
-              <div className="text-xs font-extrabold uppercase tracking-wider text-sky-300 drop-shadow">
-                Commission de l’Enseignement — LIFRAS
-              </div>
-              <h1 className="text-2xl font-extrabold leading-tight tracking-tight text-white drop-shadow-md">
-                Carnet de Bord Digital CMN
-              </h1>
-            </div>
-          </div>
-          <Badge className="shrink-0 border border-emerald-400/60 bg-slate-950/75 font-mono text-xs text-emerald-200 backdrop-blur-md">
-            {APP_VERSION}
-          </Badge>
-        </div>
-
         {/* Empilement vertical (Connexion & Inscription en haut, Accès rapide juste en dessous) pour laisser toute la moitié droite libre pour le plongeur */}
         <div className="flex flex-col gap-2.5 md:gap-3">
-          {/* Carte 1 : Authentification, Inscription & Mot de passe oublié */}
-          <Card className="border-white/30 bg-white/92 backdrop-blur-md shadow-2xl">
+          {/* Carte 1 : Authentification, Inscription & Mot de passe oublié — fond blanc net et écritures à haut contraste */}
+          <Card className="border-slate-200 bg-white shadow-2xl">
             <CardHeader className="space-y-1 p-3.5 pb-1.5">
-              <CardTitle className="text-base text-slate-900">
+              <CardTitle className="text-base font-extrabold text-slate-950">
                 Connexion & Inscription
               </CardTitle>
-              <CardDescription className="text-xs">
+              <CardDescription className="text-xs font-medium text-slate-700">
               {mode === 'SIGN_IN' &&
                 'Portail officiel sécurisé de suivi du cursus Candidat Moniteur National.'}
               {mode === 'SIGN_UP' &&
@@ -276,14 +276,14 @@ export function LoginPage(): React.ReactElement {
             </CardDescription>
 
             {/* Onglets rapides Se connecter / S'inscrire */}
-            <div className="grid grid-cols-2 gap-1 rounded-lg bg-slate-100 p-1">
+            <div className="grid grid-cols-2 gap-1 rounded-lg bg-slate-200/80 p-1">
               <button
                 type="button"
                 onClick={() => switchMode('SIGN_IN')}
-                className={`flex items-center justify-center gap-1.5 rounded-md py-1 text-xs font-bold transition ${
+                className={`flex items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-bold transition ${
                   mode === 'SIGN_IN'
-                    ? 'bg-white text-sky-800 shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-sky-700 text-white shadow-sm'
+                    : 'text-slate-800 hover:bg-white/70 hover:text-slate-950'
                 }`}
               >
                 <Lock className="h-3.5 w-3.5" />
@@ -292,10 +292,10 @@ export function LoginPage(): React.ReactElement {
               <button
                 type="button"
                 onClick={() => switchMode('SIGN_UP')}
-                className={`flex items-center justify-center gap-1.5 rounded-md py-1 text-xs font-bold transition ${
+                className={`flex items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-bold transition ${
                   mode === 'SIGN_UP'
-                    ? 'bg-white text-sky-800 shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-sky-700 text-white shadow-sm'
+                    : 'text-slate-800 hover:bg-white/70 hover:text-slate-950'
                 }`}
               >
                 <UserPlus className="h-3.5 w-3.5" />
@@ -320,11 +320,11 @@ export function LoginPage(): React.ReactElement {
 
             {/* 1. MODE CONNEXION */}
             {mode === 'SIGN_IN' && (
-              <form onSubmit={(e) => void handleSignInSubmit(e)} className="space-y-2.5">
-                <div className="space-y-1.5">
+              <form onSubmit={(e) => void handleSignInSubmit(e)} className="space-y-3">
+                <div className="space-y-1">
                   <label
                     htmlFor="email"
-                    className="text-sm font-medium text-slate-700"
+                    className="text-sm font-bold text-slate-900"
                   >
                     Adresse e-mail officielle
                   </label>
@@ -334,22 +334,23 @@ export function LoginPage(): React.ReactElement {
                     placeholder="prenom.nom@lifras.be"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    className="border-slate-400 bg-white font-semibold text-slate-950 placeholder:text-slate-500 focus:border-sky-600"
                     required
                   />
                 </div>
 
-                <div className="space-y-1.5">
+                <div className="space-y-1">
                   <div className="flex items-center justify-between">
                     <label
                       htmlFor="password"
-                      className="text-sm font-medium text-slate-700"
+                      className="text-sm font-bold text-slate-900"
                     >
                       Mot de passe
                     </label>
                     <button
                       type="button"
                       onClick={() => switchMode('FORGOT_PASSWORD')}
-                      className="text-xs font-semibold text-sky-700 hover:text-sky-900 hover:underline"
+                      className="text-xs font-bold text-sky-700 hover:text-sky-900 hover:underline"
                     >
                       Mot de passe oublié ?
                     </button>
@@ -361,7 +362,7 @@ export function LoginPage(): React.ReactElement {
                       placeholder="••••••••"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="pr-10"
+                      className="border-slate-400 bg-white pr-10 font-semibold text-slate-950 placeholder:text-slate-500 focus:border-sky-600"
                       required
                     />
                     <button
@@ -377,7 +378,7 @@ export function LoginPage(): React.ReactElement {
                           ? 'Masquer le mot de passe'
                           : 'Afficher le mot de passe'
                       }
-                      className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-500 hover:text-slate-800"
+                      className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-700 hover:text-slate-950"
                     >
                       {showPassword ? (
                         <EyeOff className="h-4 w-4" />
