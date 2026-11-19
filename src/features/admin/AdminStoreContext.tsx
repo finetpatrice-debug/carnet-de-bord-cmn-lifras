@@ -9,6 +9,10 @@ import {
   buildSampleGoldenWorkbookBuffer,
   parseCmnExcelWorkbook,
 } from '@/features/import/excelImporter';
+import {
+  JENNYFER_VERHOEVEN_EVALUATIONS,
+  JENNYFER_VERHOEVEN_SCORES,
+} from './jennyferVerhoevenDataset';
 
 interface AdminStoreContextValue {
   mnDirectory: Profile[];
@@ -180,9 +184,90 @@ const INITIAL_MN_DIRECTORY: Profile[] = [
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
   },
+  {
+    id: 'mn-xavier-doutrepont',
+    role: 'MN_EVALUATOR',
+    cohort_id: 'cohort-2026',
+    sponsor_mn_id: null,
+    last_name: 'Doutrepont',
+    first_name: 'Xavier',
+    birth_date: null,
+    street_address: null,
+    postal_code: null,
+    city: null,
+    phone_landline: null,
+    phone_gsm: '0475000000',
+    email: 'xavierdoutrepont@gmail.com',
+    febras_number: '0015000',
+    cfps_year: 2006,
+    mf_year: 2010,
+    dives_count: 1500,
+    club_name: 'CE LIFRAS',
+    club_president: null,
+    club_head_instructor: null,
+    club_head_gsm: null,
+    photo_storage_path: null,
+    aliases: ['Xavier Doutrepont', 'X. Doutrepont', 'Doutrepont', 'doutrepont'],
+    created_at: '2026-01-01T00:00:00Z',
+    updated_at: '2026-01-01T00:00:00Z',
+  },
 ];
 
 const INITIAL_CANDIDATES: Profile[] = [
+  {
+    id: 'cand-jennyfer-verhoeven',
+    role: 'CMN_CANDIDATE',
+    cohort_id: 'cohort-2026',
+    sponsor_mn_id: null,
+    last_name: 'Verhoeven',
+    first_name: 'Jennyfer',
+    birth_date: null,
+    street_address: null,
+    postal_code: null,
+    city: null,
+    phone_landline: null,
+    phone_gsm: '0476123456',
+    email: 'jennyfer.verhoeven@lifras.be',
+    febras_number: '0059876',
+    cfps_year: 2019,
+    mf_year: 2022,
+    dives_count: 720,
+    club_name: 'CFIP / LIFRAS',
+    club_president: null,
+    club_head_instructor: null,
+    club_head_gsm: null,
+    photo_storage_path: null,
+    aliases: ['Verhoeven Jennyfer', 'VERHOEVEN Jennyfer'],
+    created_at: '2026-01-05T00:00:00Z',
+    updated_at: '2026-01-05T00:00:00Z',
+  },
+  {
+    id: 'cand-valerie-gaspar',
+    role: 'CMN_CANDIDATE',
+    cohort_id: 'cohort-2026',
+    sponsor_mn_id: null,
+    last_name: 'Gaspar',
+    first_name: 'Valérie',
+    birth_date: '1982-06-30',
+    street_address: "Rue D'orgeo 24",
+    postal_code: '6880',
+    city: 'Bertrix',
+    phone_landline: null,
+    phone_gsm: '0479538534',
+    email: 'vg@geometric.be',
+    febras_number: '51786',
+    cfps_year: 2017,
+    mf_year: 2021,
+    dives_count: 1160,
+    club_name: 'RCAS',
+    club_president: 'Sylvie Glautier',
+    club_head_instructor: 'Johan Maes',
+    club_head_gsm: null,
+    photo_storage_path: null,
+    aliases: ['Gaspar Valérie', 'GASPAR Valérie'],
+    created_at: '2026-01-08T00:00:00Z',
+    updated_at: '2026-01-08T00:00:00Z',
+  },
   {
     id: 'cand-thomas-peeters',
     role: 'CMN_CANDIDATE',
@@ -394,6 +479,10 @@ function buildInitialDataset(): {
     });
   });
 
+  // 4. Les 25 évaluations officielles de Jennyfer Verhoeven (cand-jennyfer-verhoeven)
+  evaluations.push(...JENNYFER_VERHOEVEN_EVALUATIONS);
+  scores.push(...JENNYFER_VERHOEVEN_SCORES);
+
   return { evaluations, scores };
 }
 
@@ -406,6 +495,50 @@ const STORAGE_KEYS = {
   SCORES: 'cmn_lifras_scores_v1',
   AUDIT_LOGS: 'cmn_lifras_audit_logs_v1',
 } as const;
+
+function loadAndMergeById<T extends { id: string }>(
+  key: string,
+  defaults: T[]
+): T[] {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return defaults;
+    const stored = JSON.parse(raw) as T[];
+    if (!Array.isArray(stored) || stored.length === 0) return defaults;
+    const byId = new Map<string, T>();
+    for (const item of defaults) {
+      byId.set(item.id, item);
+    }
+    for (const item of stored) {
+      byId.set(item.id, item);
+    }
+    return Array.from(byId.values());
+  } catch {
+    return defaults;
+  }
+}
+
+function loadAndMergeScores(
+  key: string,
+  defaults: EvaluationScore[]
+): EvaluationScore[] {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return defaults;
+    const stored = JSON.parse(raw) as EvaluationScore[];
+    if (!Array.isArray(stored) || stored.length === 0) return defaults;
+    const byKey = new Map<string, EvaluationScore>();
+    for (const sc of defaults) {
+      byKey.set(`${sc.evaluation_id}:${sc.criterion_id}`, sc);
+    }
+    for (const sc of stored) {
+      byKey.set(`${sc.evaluation_id}:${sc.criterion_id}`, sc);
+    }
+    return Array.from(byKey.values());
+  } catch {
+    return defaults;
+  }
+}
 
 function loadFromStorage<T>(key: string, fallback: T): T {
   try {
@@ -426,16 +559,16 @@ export function AdminStoreProvider({
   children: React.ReactNode;
 }): React.ReactElement {
   const [mnDirectory, setMnDirectory] = useState<Profile[]>(() =>
-    loadFromStorage(STORAGE_KEYS.MN_DIRECTORY, INITIAL_MN_DIRECTORY)
+    loadAndMergeById(STORAGE_KEYS.MN_DIRECTORY, INITIAL_MN_DIRECTORY)
   );
   const [candidates, setCandidates] = useState<Profile[]>(() =>
-    loadFromStorage(STORAGE_KEYS.CANDIDATES, INITIAL_CANDIDATES)
+    loadAndMergeById(STORAGE_KEYS.CANDIDATES, INITIAL_CANDIDATES)
   );
   const [evaluations, setEvaluations] = useState<Evaluation[]>(() =>
-    loadFromStorage(STORAGE_KEYS.EVALUATIONS, INITIAL_DATASET.evaluations)
+    loadAndMergeById(STORAGE_KEYS.EVALUATIONS, INITIAL_DATASET.evaluations)
   );
   const [evaluationScores, setEvaluationScores] = useState<EvaluationScore[]>(() =>
-    loadFromStorage(STORAGE_KEYS.SCORES, INITIAL_DATASET.scores)
+    loadAndMergeScores(STORAGE_KEYS.SCORES, INITIAL_DATASET.scores)
   );
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(() =>
     loadFromStorage(STORAGE_KEYS.AUDIT_LOGS, [])

@@ -76,9 +76,11 @@ export async function syncLocalReferentialsCache(
     ],
     async () => {
       if (candidatesList.length > 0) {
+        await offlineDb.candidates.clear();
         await offlineDb.candidates.bulkPut(candidatesList);
       }
       if (evaluatorsList.length > 0) {
+        await offlineDb.evaluators.clear();
         await offlineDb.evaluators.bulkPut(evaluatorsList);
       }
       await offlineDb.exam_types.bulkPut(OFFICIAL_EXAM_TYPES);

@@ -200,7 +200,7 @@ export function normalizeGradeCell(rawVal: unknown): GradeCode | null {
   if (cleaned === 'S' || cleaned === '6' || cleaned === 'SATISFAISANT' || cleaned === 'SUFFISANT') {
     return 'S';
   }
-  if (cleaned === 'I' || cleaned === '4' || cleaned === 'INSUFFISANT') {
+  if (cleaned === 'I' || cleaned === '4' || cleaned === '3' || cleaned === 'INSUFFISANT') {
     return 'I';
   }
   if (cleaned === 'M' || cleaned === '2' || cleaned === 'MAUVAIS' || cleaned === 'MEDIOCRE') {
@@ -218,8 +218,52 @@ export function normalizeGradeCell(rawVal: unknown): GradeCode | null {
   ) {
     return 'NE';
   }
+
+  // Prise en charge du format fractionnaire sur 20 du formulaire Examen théorique (ex: "17/20", "18/20", "15/20")
+  const over20Match = /^(\d{1,2}(?:[.,]\d+)?)\s*\/\s*20$/.exec(cleaned);
+  if (over20Match) {
+    const val20 = Number.parseFloat(over20Match[1].replace(',', '.'));
+    if (!Number.isNaN(val20)) {
+      const val10 = val20 / 2;
+      if (val10 >= 9) return 'TB';
+      if (val10 >= 7) return 'B';
+      if (val10 >= 5) return 'S';
+      if (val10 >= 3) return 'I';
+      if (val10 >= 1.5) return 'M';
+      return '1';
+    }
+  }
+
   return null;
 }
+
+/**
+ * Table de correspondance pour le format Excel MATRIX 94 colonnes (promotions CMN 2027,
+ * ex: classeur de Jennyfer Verhoeven où les commentaires sont en colonnes CO et CP).
+ */
+const MATRIX_94_COL_TO_CRITERION_ID: Record<string, number> = {
+  // 1. COURS_MF (I..P -> 1..8)
+  I: 1, J: 2, K: 3, L: 4, M: 5, N: 6, O: 7, P: 8,
+  // 2. PEDA_AM_MC (Q..U -> 9, 10, 12, 14, 15)
+  Q: 9, R: 10, S: 12, T: 14, U: 15,
+  // 3. FORMATION_MF_REG (V..AD -> 16..26)
+  V: 16, W: 17, X: 18, Y: 20, Z: 22, AA: 23, AB: 24, AC: 19, AD: 26,
+  // 4. STAGE_EXPERIENCE (AE..AK -> 27..35)
+  AE: 27, AF: 28, AG: 29, AH: 30, AI: 31, AJ: 33, AK: 35,
+  // 5. TRAVAIL_POLE (AL..AO -> 37, 38, 39, 41)
+  AL: 37, AM: 38, AN: 39, AO: 41,
+  // 6. EXAMEN_THEORIQUE (AQ..AR -> 42, 43)
+  AQ: 42, AR: 43,
+  // 7. GESTION_DEBAT (AS..AZ -> 44..51)
+  AS: 44, AT: 45, AU: 46, AV: 47, AW: 48, AX: 49, AY: 50, AZ: 51,
+  // 8. ORGA_MER (BA..BH -> 52..60)
+  BA: 53, BB: 52, BC: 54, BD: 56, BE: 57, BF: 58, BG: 59, BH: 60,
+  // 9. ORGA_CARRIERE (BI..BS -> 61..72)
+  BI: 61, BJ: 62, BK: 63, BL: 64, BM: 65, BN: 66, BO: 67, BP: 68, BQ: 69, BR: 70, BS: 72,
+  // 10. STAGE_FINAL (BT..CN -> 73..99)
+  BT: 73, BU: 74, BV: 75, BW: 76, BX: 77, BY: 78, BZ: 79, CA: 80, CB: 81, CC: 84, CD: 85,
+  CE: 87, CF: 88, CG: 89, CH: 90, CI: 92, CJ: 93, CK: 94, CL: 95, CM: 96, CN: 99,
+};
 
 /**
  * Associe le libellé de la colonne H au code d'épreuve `ExamCode` via `exam_types.forms_label`.
@@ -294,7 +338,16 @@ export function extractCandidateProfileFromSheet(
       phoneLandline = fallbackGsm.formatted;
     }
   }
-  const email = readCellText(infoSheet, 'D23') || 'cmn.inconnu@lifras.be';
+  const rawEmail = readCellText(infoSheet, 'D23');
+  const slugify = (s: string): string =>
+    s
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9]/g, '');
+  const email =
+    rawEmail ||
+    `${slugify(firstName) || 'candidat'}.${slugify(lastName) || 'cmn'}@lifras.be`;
   const febrasNumber = normalizeTextIdentifier(readCellRaw(infoSheet, 'D27'));
 
   const cfpsRaw = readCellRaw(infoSheet, 'D28');
@@ -436,6 +489,21 @@ export function parseCmnExcelWorkbook(
 
   if (dataSheet && dataSheet['!ref']) {
     const range = XLSX.utils.decode_range(dataSheet['!ref']);
+    // Détecte automatiquement si la feuille Données est au format MATRIX 94 colonnes (commentaires en CO/CP)
+    // ou au format standard 109 colonnes (commentaires en DD/DE)
+    const headerCO = readCellText(dataSheet, 'CO1').toLowerCase();
+    const headerCP = readCellText(dataSheet, 'CP1').toLowerCase();
+    const isMatrix94Format =
+      headerCO.includes('améliorer') ||
+      headerCO.includes('ameliorer') ||
+      headerCP.includes('points forts') ||
+      range.e.c <= 95;
+
+    const criterionById = new Map<number, Criterion>();
+    for (const c of criteria) {
+      criterionById.set(c.id, c);
+    }
+
     // Parcourt toutes les lignes à partir de la ligne 2 (index 1 en base 0, Excel row = r + 1)
     for (let r = 1; r <= range.e.r; r++) {
       const excelRowNum = r + 1;
@@ -465,23 +533,48 @@ export function parseCmnExcelWorkbook(
         parseExcelDateToIso(rawEventDate) ?? new Date().toISOString().slice(0, 10);
       const startedAt = parseExcelTimestampToIso(readCellRaw(dataSheet, `B${excelRowNum}`));
       const submittedAt = parseExcelTimestampToIso(readCellRaw(dataSheet, `C${excelRowNum}`));
-      const improvementsComment = readCellText(dataSheet, `DD${excelRowNum}`);
-      const strengthsComment = readCellText(dataSheet, `DE${excelRowNum}`);
+      const improvementsComment = isMatrix94Format
+        ? readCellText(dataSheet, `CO${excelRowNum}`) ||
+          readCellText(dataSheet, `DD${excelRowNum}`)
+        : readCellText(dataSheet, `DD${excelRowNum}`) ||
+          readCellText(dataSheet, `CO${excelRowNum}`);
+      const strengthsComment = isMatrix94Format
+        ? readCellText(dataSheet, `CP${excelRowNum}`) ||
+          readCellText(dataSheet, `DE${excelRowNum}`)
+        : readCellText(dataSheet, `DE${excelRowNum}`) ||
+          readCellText(dataSheet, `CP${excelRowNum}`);
 
-      // Mapper chaque colonne non vide entre I et DC via criteria.excel_col
+      // Mapper chaque colonne de cotation selon le format du classeur (MATRIX 94 colonnes ou Standard 109 colonnes)
       const rowScores: { criterion_id: number; excel_col: string; grade: GradeCode }[] = [];
-      for (const crit of criteria) {
-        const cellAddr = `${crit.excel_col}${excelRowNum}`;
-        const rawGradeVal = readCellRaw(dataSheet, cellAddr);
-        const grade = normalizeGradeCell(rawGradeVal);
-        if (grade) {
-          // Si la colonne H correspond à l'épreuve du critère (ou si pas encore filtré), on conserve le score
-          if (!matchedExamCode || crit.exam_code === matchedExamCode) {
+      if (isMatrix94Format) {
+        for (const [colLetter, critId] of Object.entries(
+          MATRIX_94_COL_TO_CRITERION_ID
+        )) {
+          const crit = criterionById.get(critId);
+          if (!crit) continue;
+          const rawGradeVal = readCellRaw(dataSheet, `${colLetter}${excelRowNum}`);
+          const grade = normalizeGradeCell(rawGradeVal);
+          if (grade && (!matchedExamCode || crit.exam_code === matchedExamCode)) {
             rowScores.push({
               criterion_id: crit.id,
               excel_col: crit.excel_col,
               grade,
             });
+          }
+        }
+      } else {
+        for (const crit of criteria) {
+          const cellAddr = `${crit.excel_col}${excelRowNum}`;
+          const rawGradeVal = readCellRaw(dataSheet, cellAddr);
+          const grade = normalizeGradeCell(rawGradeVal);
+          if (grade) {
+            if (!matchedExamCode || crit.exam_code === matchedExamCode) {
+              rowScores.push({
+                criterion_id: crit.id,
+                excel_col: crit.excel_col,
+                grade,
+              });
+            }
           }
         }
       }

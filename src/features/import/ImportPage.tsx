@@ -49,6 +49,124 @@ export function ImportPage(): React.ReactElement {
     setImportSuccessMsg(null);
     const parsed = parseCmnExcelWorkbook(buffer, fileName, mnDirectory);
     setPreview(parsed);
+
+    // Enregistrement et inscription automatique du candidat et de ses évaluations dès le chargement du fichier Excel
+    const nowIso = new Date().toISOString();
+    const existingCandidate = candidates.find(
+      (c) =>
+        c.email.toLowerCase() === parsed.candidate.email.toLowerCase() ||
+        (c.last_name.toLowerCase() === parsed.candidate.last_name.toLowerCase() &&
+          c.first_name.toLowerCase() === parsed.candidate.first_name.toLowerCase())
+    );
+    const candidateId =
+      existingCandidate?.id ??
+      `cand-${parsed.candidate.last_name
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '')}-${parsed.candidate.first_name
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '')}`;
+
+    const candidateProfile: Profile = {
+      id: candidateId,
+      role: existingCandidate?.role ?? 'CMN_CANDIDATE',
+      cohort_id: existingCandidate?.cohort_id ?? 'cohort-2026',
+      sponsor_mn_id: existingCandidate?.sponsor_mn_id ?? null,
+      last_name: parsed.candidate.last_name,
+      first_name: parsed.candidate.first_name,
+      birth_date: parsed.candidate.birth_date ?? existingCandidate?.birth_date ?? null,
+      street_address:
+        parsed.candidate.street_address ?? existingCandidate?.street_address ?? null,
+      postal_code:
+        parsed.candidate.postal_code ?? existingCandidate?.postal_code ?? null,
+      city: parsed.candidate.city ?? existingCandidate?.city ?? null,
+      phone_landline:
+        parsed.candidate.phone_landline ?? existingCandidate?.phone_landline ?? null,
+      phone_gsm: parsed.candidate.phone_gsm ?? existingCandidate?.phone_gsm ?? null,
+      email: parsed.candidate.email,
+      febras_number:
+        parsed.candidate.febras_number ?? existingCandidate?.febras_number ?? null,
+      cfps_year: parsed.candidate.cfps_year ?? existingCandidate?.cfps_year ?? null,
+      mf_year: parsed.candidate.mf_year ?? existingCandidate?.mf_year ?? null,
+      dives_count:
+        parsed.candidate.dives_count ?? existingCandidate?.dives_count ?? null,
+      club_name: parsed.candidate.club_name ?? existingCandidate?.club_name ?? null,
+      club_president:
+        parsed.candidate.club_president ?? existingCandidate?.club_president ?? null,
+      club_head_instructor:
+        parsed.candidate.club_head_instructor ??
+        existingCandidate?.club_head_instructor ??
+        null,
+      club_head_gsm: existingCandidate?.club_head_gsm ?? null,
+      photo_storage_path: existingCandidate?.photo_storage_path ?? null,
+      aliases: existingCandidate?.aliases ?? [
+        `${parsed.candidate.last_name} ${parsed.candidate.first_name}`,
+      ],
+      created_at: existingCandidate?.created_at ?? nowIso,
+      updated_at: nowIso,
+    };
+
+    const newEvaluations: Evaluation[] = [];
+    const newScores: EvaluationScore[] = [];
+
+    for (const row of parsed.evaluations) {
+      if (!row.exam_code) continue;
+      const evalId = `eval-imp-${candidateId}-${row.legacy_row_id}`;
+      const leadMatch = row.jury_matches.find((m) => m.matchedProfileId !== null);
+
+      newEvaluations.push({
+        id: evalId,
+        legacy_row_id: row.legacy_row_id,
+        candidate_id: candidateId,
+        exam_code: row.exam_code,
+        lead_evaluator_id: leadMatch?.matchedProfileId ?? null,
+        legacy_evaluator_raw: row.legacy_evaluator_raw,
+        event_date: row.event_date,
+        started_at: row.started_at,
+        submitted_at: row.submitted_at,
+        improvements_comment: row.improvements_comment,
+        strengths_comment: row.strengths_comment,
+        status: 'PUBLISHED',
+        created_at: nowIso,
+        updated_at: nowIso,
+      });
+
+      for (const sc of row.scores) {
+        newScores.push({
+          evaluation_id: evalId,
+          criterion_id: sc.criterion_id,
+          grade: sc.grade,
+        });
+      }
+    }
+
+    const auditLog: AuditLog = {
+      id: `audit-imp-${Date.now()}`,
+      actor_id: activeAdmin?.id ?? null,
+      entity_type: 'profiles',
+      entity_id: candidateId,
+      action: 'EXCEL_WORKBOOK_IMPORT',
+      previous_value: null,
+      new_value: {
+        fileName: parsed.fileName,
+        candidate: `${candidateProfile.first_name} ${candidateProfile.last_name}`,
+        evaluationsImported: newEvaluations.length,
+        scoresImported: newScores.length,
+        globalPillarScores: parsed.scoreboardPreview.formattedGlobalPillarScores,
+      },
+      reason: `Import automatique certifié Iso-Excel du classeur ${parsed.fileName}`,
+      created_at: nowIso,
+    };
+
+    importCandidateWorkbookData({
+      candidateProfile,
+      newEvaluations,
+      newScores,
+      auditLog,
+    });
+
+    setImportSuccessMsg(
+      `Inscription et import automatiques effectués : Fiche de ${candidateProfile.first_name} ${candidateProfile.last_name}, ${newEvaluations.length} évaluations et ${newScores.length} cotations enregistrées dans l'application.`
+    );
   };
 
   const handleFileSelected = async (file: File): Promise<void> => {
