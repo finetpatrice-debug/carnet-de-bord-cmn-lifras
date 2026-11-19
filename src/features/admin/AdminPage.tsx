@@ -198,8 +198,8 @@ export function AdminPage(): React.ReactElement {
   // État pour l'ajout d'alias sur un profil MN
   const [aliasInputs, setAliasInputs] = useState<Record<string, string>>({});
 
-  // Affichage du Journal d'Audit : 'collapsed' (replié), 'compact' (hauteur limitée), 'expanded' (agrandi)
-  const [auditViewSize, setAuditViewSize] = useState<'collapsed' | 'compact' | 'expanded'>('compact');
+  // Affichage du Journal d'Audit : 'collapsed' (replié par défaut), 'compact' (hauteur limitée), 'expanded' (agrandi)
+  const [auditViewSize, setAuditViewSize] = useState<'collapsed' | 'compact' | 'expanded'>('collapsed');
 
   // État pour la modale de reclassement traçable d'une épreuve mal aiguillée
   const [selectedEvaluation, setSelectedEvaluation] = useState<Evaluation | null>(
