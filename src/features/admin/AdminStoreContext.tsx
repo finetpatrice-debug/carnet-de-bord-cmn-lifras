@@ -25,6 +25,7 @@ interface AdminStoreContextValue {
   evaluations: Evaluation[];
   evaluationScores: EvaluationScore[];
   auditLogs: AuditLog[];
+  archivedProfiles: Profile[];
   addAliasToMn: (mnProfileId: string, alias: string) => void;
   importCandidateWorkbookData: (payload: {
     candidateProfile: Profile;
@@ -52,6 +53,8 @@ interface AdminStoreContextValue {
   ) => void;
   updateFullProfile: (updated: Profile, actorId: string) => void;
   deleteProfile: (profileId: string, actorId: string) => void;
+  restoreProfile: (profileId: string, actorEmail: string, actorId: string) => void;
+  purgeArchivedProfile: (profileId: string, actorEmail: string, actorId: string) => void;
   clearAuditLogs: (actorEmail: string, actorId: string) => void;
 }
 
@@ -526,6 +529,7 @@ const STORAGE_KEYS = {
   SCORES: 'cmn_lifras_scores_v1',
   AUDIT_LOGS: 'cmn_lifras_audit_logs_v1',
   DELETED_PROFILES: 'cmn_lifras_deleted_profiles_v1',
+  ARCHIVED_PROFILES: 'cmn_lifras_archived_profiles_v1',
 } as const;
 
 function loadAndMergeById<T extends { id: string }>(
@@ -654,6 +658,9 @@ export function AdminStoreProvider({
   const [deletedProfileIds, setDeletedProfileIds] = useState<string[]>(() =>
     loadFromStorage<string[]>(STORAGE_KEYS.DELETED_PROFILES, [])
   );
+  const [archivedProfiles, setArchivedProfiles] = useState<Profile[]>(() =>
+    loadFromStorage<Profile[]>(STORAGE_KEYS.ARCHIVED_PROFILES, [])
+  );
   const deletedIdsRef = useRef<Set<string>>(new Set(deletedProfileIds));
   deletedIdsRef.current = new Set(deletedProfileIds);
 
@@ -714,11 +721,13 @@ export function AdminStoreProvider({
       try {
         if (key === 'deleted_profile_ids') {
           const incomingIds = payload as string[];
-          const mergedSet = new Set([...deletedIdsRef.current, ...incomingIds]);
-          deletedIdsRef.current = mergedSet;
-          setDeletedProfileIds(Array.from(mergedSet));
-          setMnDirectory((prev) => prev.filter((p) => !mergedSet.has(p.id)));
-          setCandidates((prev) => prev.filter((p) => !mergedSet.has(p.id)));
+          const nextSet = new Set(incomingIds);
+          deletedIdsRef.current = nextSet;
+          setDeletedProfileIds(Array.from(nextSet));
+          setMnDirectory((prev) => prev.filter((p) => !nextSet.has(p.id)));
+          setCandidates((prev) => prev.filter((p) => !nextSet.has(p.id)));
+        } else if (key === 'archived_profiles') {
+          setArchivedProfiles(payload as Profile[]);
         } else if (key === 'mn_directory') {
           setMnDirectory((prev) =>
             mergeProfilesSmart(prev, payload as Profile[]).filter(
@@ -903,6 +912,20 @@ export function AdminStoreProvider({
       void pushKeyToCloud('deleted_profile_ids', deletedProfileIds);
     }
   }, [deletedProfileIds]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        STORAGE_KEYS.ARCHIVED_PROFILES,
+        JSON.stringify(archivedProfiles)
+      );
+    } catch {
+      // Ignore quota errors
+    }
+    if (hasHydratedCloudRef.current) {
+      void pushKeyToCloud('archived_profiles', archivedProfiles);
+    }
+  }, [archivedProfiles]);
 
   useEffect(() => {
     try {
@@ -1122,6 +1145,10 @@ export function AdminStoreProvider({
     const nextDeleted = Array.from(new Set([...deletedIdsRef.current, profileId]));
     deletedIdsRef.current = new Set(nextDeleted);
     setDeletedProfileIds(nextDeleted);
+    setArchivedProfiles((prev) => [
+      { ...target, updated_at: nowIso },
+      ...prev.filter((p) => p.id !== profileId),
+    ]);
     setMnDirectory((prev) => prev.filter((p) => p.id !== profileId));
     setCandidates((prev) => prev.filter((p) => p.id !== profileId));
 
@@ -1139,10 +1166,68 @@ export function AdminStoreProvider({
         febras_number: target.febras_number,
       },
       new_value: null,
-      reason: `Suppression administrative du profil de ${target.first_name} ${target.last_name} (${target.role})`,
+      reason: `Suppression administrative (archivé en corbeille concepteur) du profil de ${target.first_name} ${target.last_name} (${target.role})`,
       created_at: nowIso,
     };
     setAuditLogs((prev) => [logEntry, ...prev]);
+  };
+
+  const restoreProfile = (
+    profileId: string,
+    actorEmail: string,
+    actorId: string
+  ): void => {
+    if (!isCreatorAccount(actorEmail, actorId)) return;
+    const archived = archivedProfiles.find((p) => p.id === profileId);
+    if (!archived) return;
+
+    const nowIso = new Date().toISOString();
+    const restored: Profile = { ...archived, updated_at: nowIso };
+
+    const nextDeleted = deletedProfileIds.filter((id) => id !== profileId);
+    deletedIdsRef.current = new Set(nextDeleted);
+    setDeletedProfileIds(nextDeleted);
+    setArchivedProfiles((prev) => prev.filter((p) => p.id !== profileId));
+
+    if (restored.role === 'CMN_CANDIDATE') {
+      setCandidates((prev) => [
+        ...prev.filter((p) => p.id !== profileId),
+        restored,
+      ]);
+    } else {
+      setMnDirectory((prev) => [
+        ...prev.filter((p) => p.id !== profileId),
+        restored,
+      ]);
+    }
+
+    const logEntry: AuditLog = {
+      id: `audit-restore-prof-${Date.now()}`,
+      actor_id: actorId,
+      entity_type: 'profiles',
+      entity_id: profileId,
+      action: 'RESTORE_USER_PROFILE',
+      previous_value: null,
+      new_value: {
+        first_name: restored.first_name,
+        last_name: restored.last_name,
+        email: restored.email,
+        role: restored.role,
+        febras_number: restored.febras_number,
+      },
+      reason: `Restauration depuis la corbeille concepteur du profil de ${restored.first_name} ${restored.last_name} (${restored.role})`,
+      created_at: nowIso,
+    };
+    setAuditLogs((prev) => [logEntry, ...prev]);
+  };
+
+  const purgeArchivedProfile = (
+    profileId: string,
+    actorEmail: string,
+    actorId: string
+  ): void => {
+    if (!isCreatorAccount(actorEmail, actorId)) return;
+    setArchivedProfiles((prev) => prev.filter((p) => p.id !== profileId));
   };
 
   const clearAuditLogs = (actorEmail: string, actorId: string): void => {
@@ -1170,6 +1255,7 @@ export function AdminStoreProvider({
         evaluations,
         evaluationScores,
         auditLogs,
+        archivedProfiles,
         addAliasToMn,
         importCandidateWorkbookData,
         applyReclassification,
@@ -1178,6 +1264,8 @@ export function AdminStoreProvider({
         updateProfileRole,
         updateFullProfile,
         deleteProfile,
+        restoreProfile,
+        purgeArchivedProfile,
         clearAuditLogs,
       }}
     >

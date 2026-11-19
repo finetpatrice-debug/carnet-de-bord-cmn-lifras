@@ -36,6 +36,7 @@ import {
   Maximize2,
   Minimize2,
   Plus,
+  RotateCcw,
   Shield,
   Trash2,
   UserPlus,
@@ -53,12 +54,15 @@ export function AdminPage(): React.ReactElement {
     evaluations,
     evaluationScores,
     auditLogs,
+    archivedProfiles,
     addAliasToMn,
     applyReclassification,
     createCandidateProfile,
     updateProfileRole,
     updateFullProfile,
     deleteProfile,
+    restoreProfile,
+    purgeArchivedProfile,
     clearAuditLogs,
   } = useAdminStore();
 
@@ -1236,6 +1240,119 @@ export function AdminPage(): React.ReactElement {
           </div>
         </CardContent>
       </Card>
+
+      {/* Corbeille / Profils Archivés (exclusivement réservée au concepteur Patrice Finet) */}
+      {isCreator && (
+        <Card className="border-amber-300 bg-amber-50/40">
+          <CardHeader>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2 text-amber-800">
+                <RotateCcw className="h-5 w-5" />
+                <CardTitle className="text-base">
+                  Corbeille des Profils Archivés (Accès Exclusif Concepteur)
+                </CardTitle>
+                <Badge variant="secondary" className="text-[11px]">
+                  {archivedProfiles.length} profil
+                  {archivedProfiles.length > 1 ? 's' : ''}
+                </Badge>
+              </div>
+              <Badge className="bg-amber-700 text-white text-[10px]">
+                Réservé à Patrice Finet
+              </Badge>
+            </div>
+            <CardDescription>
+              Chaque profil supprimé par un administrateur est conservé ici avec sa
+              photo et ses coordonnées. Vous seul pouvez le restaurer en un clic ou
+              le purger définitivement.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {archivedProfiles.length === 0 ? (
+              <p className="text-xs text-slate-500">
+                La corbeille est actuellement vide. Aucun profil supprimé en attente
+                de restauration.
+              </p>
+            ) : (
+              <div className="grid gap-3 md:grid-cols-2">
+                {archivedProfiles.map((arch) => (
+                  <div
+                    key={arch.id}
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-200 bg-white p-3"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      {arch.photo_storage_path ? (
+                        <img
+                          src={arch.photo_storage_path}
+                          alt={`${arch.first_name} ${arch.last_name}`}
+                          className="h-10 w-10 shrink-0 rounded-full border border-amber-400 object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-100 text-xs font-bold text-amber-900">
+                          {`${arch.first_name.charAt(0)}${arch.last_name.charAt(0)}`.toUpperCase()}
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-semibold text-slate-900">
+                          {arch.first_name} {arch.last_name}
+                        </div>
+                        <div className="truncate text-[11px] text-slate-500">
+                          {USER_ROLE_LABELS[arch.role]} • {arch.email}
+                        </div>
+                        <div className="text-[10px] text-slate-400">
+                          Archivé le{' '}
+                          {new Date(arch.updated_at).toLocaleString('fr-BE')}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="h-7 bg-emerald-600 px-2.5 text-xs text-white hover:bg-emerald-700"
+                        onClick={() => {
+                          restoreProfile(
+                            arch.id,
+                            activeAdmin?.email ?? '',
+                            activeAdmin?.id ?? ''
+                          );
+                          setCandidateCreatedMsg(
+                            `Le profil de ${arch.first_name} ${arch.last_name} a été restauré avec toutes ses données.`
+                          );
+                        }}
+                      >
+                        <RotateCcw className="h-3.5 w-3.5" />
+                        Restaurer
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        title="Purger définitivement de la corbeille"
+                        className="h-7 border-red-200 px-2 text-xs text-red-700 hover:bg-red-50"
+                        onClick={() => {
+                          if (
+                            window.confirm(
+                              `Purger définitivement ${arch.first_name} ${arch.last_name} de la corbeille ? Cette action est irréversible.`
+                            )
+                          ) {
+                            purgeArchivedProfile(
+                              arch.id,
+                              activeAdmin?.email ?? '',
+                              activeAdmin?.id ?? ''
+                            );
+                          }
+                        }}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* 3. Journal d'Audit Immuable (audit_logs) */}
       <Card>
