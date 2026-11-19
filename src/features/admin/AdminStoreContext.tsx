@@ -13,6 +13,10 @@ import {
   JENNYFER_VERHOEVEN_EVALUATIONS,
   JENNYFER_VERHOEVEN_SCORES,
 } from './jennyferVerhoevenDataset';
+import {
+  VALERIE_GASPAR_EVALUATIONS,
+  VALERIE_GASPAR_SCORES,
+} from './valerieGasparDataset';
 
 interface AdminStoreContextValue {
   mnDirectory: Profile[];
@@ -482,6 +486,10 @@ function buildInitialDataset(): {
   // 4. Les 25 évaluations officielles de Jennyfer Verhoeven (cand-jennyfer-verhoeven)
   evaluations.push(...JENNYFER_VERHOEVEN_EVALUATIONS);
   scores.push(...JENNYFER_VERHOEVEN_SCORES);
+
+  // 5. Les 20 évaluations officielles de Valérie Gaspar (cand-valerie-gaspar)
+  evaluations.push(...VALERIE_GASPAR_EVALUATIONS);
+  scores.push(...VALERIE_GASPAR_SCORES);
 
   return { evaluations, scores };
 }
