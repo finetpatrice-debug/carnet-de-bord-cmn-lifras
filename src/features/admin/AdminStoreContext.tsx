@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { isSupabaseConfigured, supabase } from '@/services/supabaseClient';
 import type {
   AuditLog,
   Evaluation,
@@ -559,6 +560,34 @@ function loadFromStorage<T>(key: string, fallback: T): T {
   }
 }
 
+function mergeArraysById<T extends { id: string }>(
+  base: T[],
+  incoming: T[]
+): T[] {
+  const byId = new Map<string, T>();
+  for (const item of base) {
+    byId.set(item.id, item);
+  }
+  for (const item of incoming) {
+    byId.set(item.id, item);
+  }
+  return Array.from(byId.values());
+}
+
+function mergeScoresArrays(
+  base: EvaluationScore[],
+  incoming: EvaluationScore[]
+): EvaluationScore[] {
+  const byKey = new Map<string, EvaluationScore>();
+  for (const sc of base) {
+    byKey.set(`${sc.evaluation_id}:${sc.criterion_id}`, sc);
+  }
+  for (const sc of incoming) {
+    byKey.set(`${sc.evaluation_id}:${sc.criterion_id}`, sc);
+  }
+  return Array.from(byKey.values());
+}
+
 const AdminStoreContext = createContext<AdminStoreContextValue | undefined>(undefined);
 
 export function AdminStoreProvider({
@@ -582,11 +611,116 @@ export function AdminStoreProvider({
     loadFromStorage(STORAGE_KEYS.AUDIT_LOGS, [])
   );
 
+  // Drapeaux pour éviter les boucles de ré-émission lors d'une réception Realtime depuis Supabase
+  const isApplyingRemoteRef = useRef<boolean>(false);
+  const hasHydratedCloudRef = useRef<boolean>(false);
+
+  const pushKeyToCloud = async (key: string, payload: unknown): Promise<void> => {
+    if (!isSupabaseConfigured || isApplyingRemoteRef.current) return;
+    try {
+      await supabase.from('cmn_shared_state').upsert({
+        key,
+        payload,
+        updated_at: new Date().toISOString(),
+      });
+    } catch {
+      // Ignore network errors silently (offline-first fallback)
+    }
+  };
+
+  // Synchronisation initiale et temps réel (PC <-> GSM) via Supabase cmn_shared_state
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+
+    let cancelled = false;
+
+    const applyRemoteRow = (key: string, payload: unknown): void => {
+      if (!Array.isArray(payload)) return;
+      isApplyingRemoteRef.current = true;
+      try {
+        if (key === 'mn_directory') {
+          setMnDirectory((prev) =>
+            mergeArraysById(prev, payload as Profile[])
+          );
+        } else if (key === 'candidates') {
+          setCandidates((prev) =>
+            mergeArraysById(prev, payload as Profile[])
+          );
+        } else if (key === 'evaluations') {
+          setEvaluations((prev) =>
+            mergeArraysById(prev, payload as Evaluation[])
+          );
+        } else if (key === 'scores') {
+          setEvaluationScores((prev) =>
+            mergeScoresArrays(prev, payload as EvaluationScore[])
+          );
+        } else if (key === 'audit_logs') {
+          setAuditLogs((prev) =>
+            mergeArraysById(prev, payload as AuditLog[])
+          );
+        }
+      } finally {
+        setTimeout(() => {
+          isApplyingRemoteRef.current = false;
+        }, 150);
+      }
+    };
+
+    const hydrateFromCloud = async (): Promise<void> => {
+      try {
+        const { data, error } = await supabase
+          .from('cmn_shared_state')
+          .select('key, payload');
+        if (cancelled) return;
+        if (!error && Array.isArray(data) && data.length > 0) {
+          for (const row of data) {
+            applyRemoteRow(row.key as string, row.payload);
+          }
+        } else if (!error && Array.isArray(data) && data.length === 0) {
+          // Premier appareil à se connecter sur la table vide : publie immédiatement ses données locales (photos, profils, évaluations)
+          void pushKeyToCloud('mn_directory', mnDirectory);
+          void pushKeyToCloud('candidates', candidates);
+          void pushKeyToCloud('evaluations', evaluations);
+          void pushKeyToCloud('scores', evaluationScores);
+          void pushKeyToCloud('audit_logs', auditLogs);
+        }
+      } finally {
+        if (!cancelled) {
+          hasHydratedCloudRef.current = true;
+        }
+      }
+    };
+
+    void hydrateFromCloud();
+
+    const channel = supabase
+      .channel('cmn-shared-state-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'cmn_shared_state' },
+        (change) => {
+          const newRow = change.new as { key?: string; payload?: unknown } | null;
+          if (newRow?.key && newRow.payload !== undefined) {
+            applyRemoteRow(newRow.key, newRow.payload);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      cancelled = true;
+      void supabase.removeChannel(channel);
+    };
+  }, []);
+
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEYS.MN_DIRECTORY, JSON.stringify(mnDirectory));
     } catch {
       // Ignore quota errors
+    }
+    if (hasHydratedCloudRef.current) {
+      void pushKeyToCloud('mn_directory', mnDirectory);
     }
   }, [mnDirectory]);
 
@@ -596,6 +730,9 @@ export function AdminStoreProvider({
     } catch {
       // Ignore quota errors
     }
+    if (hasHydratedCloudRef.current) {
+      void pushKeyToCloud('candidates', candidates);
+    }
   }, [candidates]);
 
   useEffect(() => {
@@ -603,6 +740,9 @@ export function AdminStoreProvider({
       localStorage.setItem(STORAGE_KEYS.EVALUATIONS, JSON.stringify(evaluations));
     } catch {
       // Ignore quota errors
+    }
+    if (hasHydratedCloudRef.current) {
+      void pushKeyToCloud('evaluations', evaluations);
     }
   }, [evaluations]);
 
@@ -612,6 +752,9 @@ export function AdminStoreProvider({
     } catch {
       // Ignore quota errors
     }
+    if (hasHydratedCloudRef.current) {
+      void pushKeyToCloud('scores', evaluationScores);
+    }
   }, [evaluationScores]);
 
   useEffect(() => {
@@ -619,6 +762,9 @@ export function AdminStoreProvider({
       localStorage.setItem(STORAGE_KEYS.AUDIT_LOGS, JSON.stringify(auditLogs));
     } catch {
       // Ignore quota errors
+    }
+    if (hasHydratedCloudRef.current) {
+      void pushKeyToCloud('audit_logs', auditLogs);
     }
   }, [auditLogs]);
 
