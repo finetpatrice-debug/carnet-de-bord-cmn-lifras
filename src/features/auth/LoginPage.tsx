@@ -204,19 +204,19 @@ export function LoginPage(): React.ReactElement {
         className="pointer-events-none fixed inset-0 md:hidden bg-gradient-to-br from-slate-950 via-slate-900 to-sky-950"
       />
 
-      {/* En-tête agrandi, remonté tout en haut à gauche sur PC (md+) avec "COMMISSION DE L'ENSEIGNEMENT — LIFRAS" sur 1 ligne */}
-      <div className="relative z-10 hidden md:flex items-center gap-4 pt-1">
+      {/* En-tête agrandi, remonté tout en haut sur PC (md+) et aligné verticalement pile au-dessus du bloc Connexion & Inscription */}
+      <div className="relative z-10 hidden md:flex md:ml-[6%] lg:ml-[9%] xl:ml-[11%] w-full max-w-md lg:max-w-[440px] items-center gap-3.5 pt-1">
         <img
           src="/logo-lifras.jpg"
           alt="Logo Officiel LIFRAS"
           className="h-16 w-16 shrink-0 rounded-full border-2 border-sky-400 bg-white object-cover shadow-xl"
         />
-        <div>
+        <div className="min-w-0">
           <div className="whitespace-nowrap text-xs font-extrabold uppercase tracking-wider text-sky-300 drop-shadow">
             Commission de l’Enseignement — LIFRAS
           </div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-extrabold leading-tight tracking-tight text-white drop-shadow-md">
+          <div className="flex items-center gap-2.5">
+            <h1 className="whitespace-nowrap text-xl lg:text-2xl font-extrabold leading-tight tracking-tight text-white drop-shadow-md">
               Carnet de Bord Digital CMN
             </h1>
             <Badge className="shrink-0 border border-emerald-400/60 bg-slate-950/75 font-mono text-xs text-emerald-200 backdrop-blur-md">
@@ -236,23 +236,23 @@ export function LoginPage(): React.ReactElement {
             className="h-32 w-full object-cover object-[70%_28%]"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/35 to-transparent" />
-          <div className="absolute bottom-0 left-0 right-0 flex items-end justify-between gap-2 px-3 py-2">
-            <div className="flex items-center gap-2.5 min-w-0">
+          <div className="absolute bottom-0 left-0 right-0 flex items-end justify-between gap-1.5 px-2.5 py-2">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
               <img
                 src="/logo-lifras.jpg"
                 alt="Logo Officiel LIFRAS"
-                className="h-10 w-10 shrink-0 rounded-full border-2 border-sky-400 bg-white object-cover shadow-md"
+                className="h-9 w-9 shrink-0 rounded-full border-2 border-sky-400 bg-white object-cover shadow-md"
               />
-              <div className="min-w-0">
-                <div className="truncate text-[10px] font-extrabold uppercase tracking-wider text-sky-300">
+              <div className="min-w-0 flex-1">
+                <div className="text-[9px] leading-tight font-extrabold uppercase tracking-tight text-sky-300">
                   Commission de l’Enseignement — LIFRAS
                 </div>
-                <h1 className="truncate text-base font-extrabold tracking-tight text-white drop-shadow">
+                <h1 className="text-sm leading-tight font-extrabold tracking-tight text-white drop-shadow">
                   Carnet de Bord Digital CMN
                 </h1>
               </div>
             </div>
-            <Badge className="shrink-0 border border-emerald-400/50 bg-emerald-500/25 font-mono text-[11px] text-emerald-200 backdrop-blur-sm">
+            <Badge className="shrink-0 border border-emerald-400/50 bg-emerald-500/25 px-1.5 py-0.5 font-mono text-[10px] text-emerald-200 backdrop-blur-sm">
               {APP_VERSION}
             </Badge>
           </div>
