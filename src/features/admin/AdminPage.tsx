@@ -1,6 +1,13 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/features/auth/AuthContext';
 import { isCreatorAccount, useAdminStore } from './AdminStoreContext';
+import {
+  clearConnectionLogs,
+  fetchConnectionLogs,
+  onOnlineUsersChange,
+  type ConnectionLogEntry,
+  type OnlineUserPresence,
+} from '@/services/presenceService';
 import {
   buildCriterionMappingProposals,
   executeExamReclassification,
@@ -35,10 +42,13 @@ import {
   History,
   Maximize2,
   Minimize2,
+  Monitor,
   Plus,
+  Radio,
   RefreshCw,
   RotateCcw,
   Shield,
+  Smartphone,
   Trash2,
   UserPlus,
   Users,
@@ -207,6 +217,28 @@ export function AdminPage(): React.ReactElement {
 
   // Affichage de l'Outil de Reclassement (section 1) : replié par défaut à l'ouverture
   const [reclassifyViewSize, setReclassifyViewSize] = useState<'collapsed' | 'compact' | 'expanded'>('collapsed');
+
+  // Module isolé Connexions & Présence (strictement réservé au concepteur, replié par défaut)
+  const [presenceExpanded, setPresenceExpanded] = useState<boolean>(false);
+  const [onlineUsers, setOnlineUsers] = useState<OnlineUserPresence[]>([]);
+  const [connectionLogs, setConnectionLogs] = useState<ConnectionLogEntry[]>([]);
+  const [loadingConnLogs, setLoadingConnLogs] = useState<boolean>(false);
+
+  const refreshConnectionLogs = async (): Promise<void> => {
+    setLoadingConnLogs(true);
+    try {
+      const logs = await fetchConnectionLogs();
+      setConnectionLogs(logs);
+    } finally {
+      setLoadingConnLogs(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!isCreator || !activeAdmin) return;
+    void refreshConnectionLogs();
+    return onOnlineUsersChange(setOnlineUsers);
+  }, [isCreator, activeAdmin?.id]);
 
   // État pour la modale de reclassement traçable d'une épreuve mal aiguillée
   const [selectedEvaluation, setSelectedEvaluation] = useState<Evaluation | null>(
@@ -1447,6 +1479,194 @@ export function AdminPage(): React.ReactElement {
               </div>
             )}
           </CardContent>
+        </Card>
+      )}
+
+      {/* Connexions & Présence Temps Réel (exclusivement réservé au concepteur Patrice Finet, replié par défaut) */}
+      {isCreator && (
+        <Card className="border-emerald-300 bg-emerald-50/30">
+          <CardHeader>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-2 text-emerald-800">
+                <Radio className="h-5 w-5 text-emerald-600" />
+                <CardTitle className="text-base">
+                  Connexions & Présence (Accès Exclusif Concepteur)
+                </CardTitle>
+                <Badge className="bg-emerald-600 text-white text-[11px]">
+                  {onlineUsers.length} en ligne
+                </Badge>
+                <Badge variant="secondary" className="text-[11px]">
+                  {connectionLogs.length} connexion
+                  {connectionLogs.length > 1 ? 's' : ''} récente
+                  {connectionLogs.length > 1 ? 's' : ''}
+                </Badge>
+              </div>
+              <div className="flex items-center gap-1.5">
+                {presenceExpanded && (
+                  <>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={loadingConnLogs}
+                      onClick={() => void refreshConnectionLogs()}
+                      className="h-7 px-2 text-xs"
+                    >
+                      <RefreshCw
+                        className={`h-3.5 w-3.5 ${loadingConnLogs ? 'animate-spin' : ''}`}
+                      />
+                      Actualiser
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="destructive"
+                      disabled={connectionLogs.length === 0}
+                      onClick={async () => {
+                        if (
+                          window.confirm(
+                            "Vider l'historique des connexions récentes ?"
+                          )
+                        ) {
+                          await clearConnectionLogs();
+                          setConnectionLogs([]);
+                        }
+                      }}
+                      className="h-7 px-2 text-xs"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Vider
+                    </Button>
+                  </>
+                )}
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={presenceExpanded ? 'outline' : 'default'}
+                  onClick={() => {
+                    const next = !presenceExpanded;
+                    setPresenceExpanded(next);
+                    if (next) {
+                      void refreshConnectionLogs();
+                    }
+                  }}
+                  className="h-7 px-2 text-xs"
+                >
+                  {presenceExpanded ? (
+                    <>
+                      <ChevronUp className="h-3.5 w-3.5" />
+                      Réduire
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="h-3.5 w-3.5" />
+                      Déplier
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+            <CardDescription>
+              Visualisez en direct qui utilise l’application et l’historique des
+              100 dernières connexions (invisible pour les autres administrateurs).
+            </CardDescription>
+          </CardHeader>
+          {presenceExpanded && (
+            <CardContent className="space-y-4">
+              {/* Bloc 1 : En ligne maintenant */}
+              <div>
+                <div className="mb-2 text-xs font-bold uppercase tracking-wide text-emerald-800">
+                  En ligne maintenant ({onlineUsers.length})
+                </div>
+                {onlineUsers.length === 0 ? (
+                  <p className="text-xs text-slate-500">
+                    Aucune session active détectée pour le moment.
+                  </p>
+                ) : (
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    {onlineUsers.map((u) => (
+                      <div
+                        key={u.sessionKey}
+                        className="flex min-w-0 max-w-full items-center justify-between gap-2 overflow-hidden rounded-lg border border-emerald-200 bg-white px-3 py-2 text-xs"
+                      >
+                        <div className="flex min-w-0 flex-1 items-center gap-2">
+                          <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-emerald-500 animate-pulse" />
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate font-semibold text-slate-900">
+                              {u.fullName}
+                            </div>
+                            <div className="truncate text-[11px] text-slate-500">
+                              {USER_ROLE_LABELS[u.role]} • {u.email}
+                            </div>
+                          </div>
+                        </div>
+                        <Badge
+                          variant="outline"
+                          className="shrink-0 gap-1 text-[10px]"
+                        >
+                          {u.device === 'GSM' ? (
+                            <Smartphone className="h-3 w-3" />
+                          ) : (
+                            <Monitor className="h-3 w-3" />
+                          )}
+                          {u.device}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Bloc 2 : Historique des connexions récentes */}
+              <div>
+                <div className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-700">
+                  Historique des connexions récentes (max 100)
+                </div>
+                {connectionLogs.length === 0 ? (
+                  <p className="text-xs text-slate-500">
+                    Aucune connexion enregistrée pour l’instant.
+                  </p>
+                ) : (
+                  <div className="max-h-64 space-y-1.5 overflow-y-auto pr-1">
+                    {connectionLogs.map((log) => (
+                      <div
+                        key={log.id}
+                        className="flex min-w-0 max-w-full flex-wrap items-center justify-between gap-2 overflow-hidden rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate font-semibold text-slate-900">
+                            {log.fullName}{' '}
+                            <span className="font-normal text-slate-500">
+                              ({USER_ROLE_LABELS[log.role]})
+                            </span>
+                          </div>
+                          <div className="truncate text-[11px] text-slate-500">
+                            {log.email}
+                          </div>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-2">
+                          <Badge
+                            variant="secondary"
+                            className="gap-1 text-[10px]"
+                          >
+                            {log.device === 'GSM' ? (
+                              <Smartphone className="h-3 w-3" />
+                            ) : (
+                              <Monitor className="h-3 w-3" />
+                            )}
+                            {log.device}
+                          </Badge>
+                          <span className="text-[11px] text-slate-400">
+                            {new Date(log.connectedAt).toLocaleString('fr-BE')}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          )}
         </Card>
       )}
 

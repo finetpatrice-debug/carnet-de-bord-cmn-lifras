@@ -15,6 +15,10 @@ import {
   requestBrowserNotificationPermission,
   type AppNotificationItem,
 } from '@/services/notificationService';
+import {
+  recordConnectionEvent,
+  subscribePresence,
+} from '@/services/presenceService';
 import type { UserRole } from '@/domain/types';
 import { USER_ROLE_LABELS } from '@/domain/types';
 import { APP_VERSION } from '@/domain/referentials';
@@ -146,6 +150,13 @@ export function ProtectedLayout(): React.ReactElement {
   useEffect(() => {
     void syncLocalReferentialsCache(candidates, mnDirectory);
   }, [candidates, mnDirectory]);
+
+  // Suivi discret de présence temps réel & journal de connexion (module isolé silencieux)
+  useEffect(() => {
+    if (!profile) return;
+    void recordConnectionEvent(profile);
+    return subscribePresence(profile);
+  }, [profile?.id, profile?.email, profile?.role]);
 
   // Synchronisation automatique en arrière-plan (Background Sync : online + visibilitychange + intervalle 30s)
   useEffect(() => {
