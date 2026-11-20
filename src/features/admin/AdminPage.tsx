@@ -181,13 +181,13 @@ export function AdminPage(): React.ReactElement {
         club_name: candidateProfile.club_name,
         sponsor_mn_id: candidateProfile.sponsor_mn_id,
       },
-      reason: `Inscription administrative du nouveau CMN ${candidateProfile.first_name} ${candidateProfile.last_name} dans la cohorte CMN_2026`,
+      reason: `Inscription administrative du nouveau CMN ${candidateProfile.first_name} ${candidateProfile.last_name} dans la promotion CMN_2026`,
       created_at: nowIso,
     };
 
     createCandidateProfile({ candidateProfile, auditLog });
     setCandidateCreatedMsg(
-      `Le candidat CMN ${candidateProfile.first_name} ${candidateProfile.last_name} (FEBRAS #${candidateProfile.febras_number ?? 'N/A'}) a été inscrit dans la cohorte CMN_2026.`
+      `Le candidat CMN ${candidateProfile.first_name} ${candidateProfile.last_name} (FEBRAS #${candidateProfile.febras_number ?? 'N/A'}) a été inscrit dans la promotion CMN_2026.`
     );
     setNewCandLastName('');
     setNewCandFirstName('');
@@ -360,7 +360,7 @@ export function AdminPage(): React.ReactElement {
             <div className="flex items-center gap-2 text-sky-800">
               <UserPlus className="h-5 w-5" />
               <CardTitle className="text-base">
-                Inscription Manuelle d’un Nouveau Profil (Cohorte CMN_2026)
+                Inscription Manuelle d’un Nouveau Profil (Promotion CMN_2026)
               </CardTitle>
             </div>
             <CardDescription>

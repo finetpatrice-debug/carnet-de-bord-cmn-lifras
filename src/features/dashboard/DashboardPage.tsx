@@ -526,7 +526,7 @@ export function DashboardPage(): React.ReactElement {
               }`}
             >
               <Users className="h-4 w-4" />
-              <span>Vue Superviseur (Comparatif Cohorte)</span>
+              <span>Vue Superviseur (Comparatif Promotion)</span>
             </button>
           )}
         </div>
@@ -1329,7 +1329,7 @@ export function DashboardPage(): React.ReactElement {
             <div className="flex items-center gap-2 text-sky-700">
               <Users className="h-5 w-5" />
               <CardTitle className="text-base">
-                Vue Superviseur — Tableau Comparatif de la Cohorte CMN_2026
+                Vue Superviseur — Tableau Comparatif de la Promotion CMN_2026
               </CardTitle>
             </div>
             <CardDescription>
