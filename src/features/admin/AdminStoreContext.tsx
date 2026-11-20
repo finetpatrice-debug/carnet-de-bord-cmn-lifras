@@ -789,7 +789,10 @@ export function AdminStoreProvider({
           // Si l'appareil local possède des photos ou profils plus récents absents du cloud, on les republie sans écraser les photos distantes
           const remoteMn = remoteByKey.get('mn_directory');
           if (Array.isArray(remoteMn)) {
-            const mergedMn = mergeProfilesSmart(mnDirectory, remoteMn as Profile[]);
+            const mergedMn = mergeProfilesSmart(
+              mnDirectory,
+              remoteMn as Profile[]
+            ).filter((p) => !deletedIdsRef.current.has(p.id));
             const remoteHasAllLocalPhotos = mergedMn.every((m) => {
               const r = (remoteMn as Profile[]).find((x) => x.id === m.id);
               return Boolean(r) && (!m.photo_storage_path || Boolean(r?.photo_storage_path));
@@ -805,7 +808,10 @@ export function AdminStoreProvider({
 
           const remoteCand = remoteByKey.get('candidates');
           if (Array.isArray(remoteCand)) {
-            const mergedCand = mergeProfilesSmart(candidates, remoteCand as Profile[]);
+            const mergedCand = mergeProfilesSmart(
+              candidates,
+              remoteCand as Profile[]
+            ).filter((p) => !deletedIdsRef.current.has(p.id));
             const remoteHasAllLocalPhotos = mergedCand.every((c) => {
               const r = (remoteCand as Profile[]).find((x) => x.id === c.id);
               return Boolean(r) && (!c.photo_storage_path || Boolean(r?.photo_storage_path));
@@ -814,6 +820,38 @@ export function AdminStoreProvider({
               void supabase.from('cmn_shared_state').upsert({
                 key: 'candidates',
                 payload: mergedCand,
+                updated_at: new Date().toISOString(),
+              });
+            }
+          }
+
+          // Réconciliation bidirectionnelle complète des évaluations et scores (PC <-> GSM)
+          // Si cet appareil possède des évaluations ou notes locales absentes du cloud, on les publie immédiatement
+          const remoteEvals = remoteByKey.get('evaluations');
+          if (Array.isArray(remoteEvals)) {
+            const mergedEvals = mergeArraysById(
+              evaluations,
+              remoteEvals as Evaluation[]
+            );
+            if (mergedEvals.length > remoteEvals.length) {
+              void supabase.from('cmn_shared_state').upsert({
+                key: 'evaluations',
+                payload: mergedEvals,
+                updated_at: new Date().toISOString(),
+              });
+            }
+          }
+
+          const remoteScores = remoteByKey.get('scores');
+          if (Array.isArray(remoteScores)) {
+            const mergedScores = mergeScoresArrays(
+              evaluationScores,
+              remoteScores as EvaluationScore[]
+            );
+            if (mergedScores.length > remoteScores.length) {
+              void supabase.from('cmn_shared_state').upsert({
+                key: 'scores',
+                payload: mergedScores,
                 updated_at: new Date().toISOString(),
               });
             }
