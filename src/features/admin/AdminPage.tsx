@@ -36,6 +36,7 @@ import {
   Maximize2,
   Minimize2,
   Plus,
+  RefreshCw,
   RotateCcw,
   Shield,
   Trash2,
@@ -64,7 +65,10 @@ export function AdminPage(): React.ReactElement {
     restoreProfile,
     purgeArchivedProfile,
     clearAuditLogs,
+    syncWithCloudNow,
   } = useAdminStore();
+
+  const [isSyncingCloud, setIsSyncingCloud] = useState(false);
 
   const isCreator = isCreatorAccount(activeAdmin?.email, activeAdmin?.id);
 
@@ -555,6 +559,29 @@ export function AdminPage(): React.ReactElement {
               </Badge>
             </div>
             <div className="flex items-center gap-1.5">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={isSyncingCloud}
+                onClick={async () => {
+                  setIsSyncingCloud(true);
+                  const res = await syncWithCloudNow();
+                  setIsSyncingCloud(false);
+                  setCandidateCreatedMsg(
+                    res.synced
+                      ? `Synchronisation Cloud PC ↔ GSM terminée : ${res.evaluationsCount} évaluations alignées.`
+                      : 'Synchronisation Cloud indisponible (vérifiez la connexion réseau).'
+                  );
+                }}
+                title="Forcer la synchronisation complète PC ↔ GSM avec Supabase"
+                className="h-7 px-2 text-xs text-sky-700 border-sky-200 hover:bg-sky-50"
+              >
+                <RefreshCw
+                  className={`h-3.5 w-3.5 ${isSyncingCloud ? 'animate-spin' : ''}`}
+                />
+                Synchroniser
+              </Button>
               <Button
                 type="button"
                 size="sm"

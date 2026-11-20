@@ -56,6 +56,7 @@ interface AdminStoreContextValue {
   restoreProfile: (profileId: string, actorEmail: string, actorId: string) => void;
   purgeArchivedProfile: (profileId: string, actorEmail: string, actorId: string) => void;
   clearAuditLogs: (actorEmail: string, actorId: string) => void;
+  syncWithCloudNow: () => Promise<{ evaluationsCount: number; synced: boolean }>;
 }
 
 export const CREATOR_EMAILS = [
@@ -692,6 +693,18 @@ export function AdminStoreProvider({
     loadFromStorage(STORAGE_KEYS.AUDIT_LOGS, [])
   );
 
+  // Refs toujours à jour pour que la réconciliation cloud lise l'état courant (jamais périmé)
+  const mnRef = useRef<Profile[]>(mnDirectory);
+  mnRef.current = mnDirectory;
+  const candidatesRef = useRef<Profile[]>(candidates);
+  candidatesRef.current = candidates;
+  const evaluationsRef = useRef<Evaluation[]>(evaluations);
+  evaluationsRef.current = evaluations;
+  const scoresRef = useRef<EvaluationScore[]>(evaluationScores);
+  scoresRef.current = evaluationScores;
+  const auditLogsRef = useRef<AuditLog[]>(auditLogs);
+  auditLogsRef.current = auditLogs;
+
   // Drapeaux pour éviter les boucles de ré-émission lors d'une réception Realtime depuis Supabase
   const isApplyingRemoteRef = useRef<boolean>(false);
   const hasHydratedCloudRef = useRef<boolean>(false);
@@ -709,169 +722,176 @@ export function AdminStoreProvider({
     }
   };
 
-  // Synchronisation initiale et temps réel (PC <-> GSM) via Supabase cmn_shared_state
+  const applyRemoteRow = (key: string, payload: unknown): void => {
+    if (!Array.isArray(payload)) return;
+    isApplyingRemoteRef.current = true;
+    try {
+      if (key === 'deleted_profile_ids') {
+        const incomingIds = payload as string[];
+        const nextSet = new Set(incomingIds);
+        deletedIdsRef.current = nextSet;
+        setDeletedProfileIds(Array.from(nextSet));
+        setMnDirectory((prev) => prev.filter((p) => !nextSet.has(p.id)));
+        setCandidates((prev) => prev.filter((p) => !nextSet.has(p.id)));
+      } else if (key === 'archived_profiles') {
+        setArchivedProfiles(payload as Profile[]);
+      } else if (key === 'mn_directory') {
+        setMnDirectory((prev) =>
+          mergeProfilesSmart(prev, payload as Profile[]).filter(
+            (p) => !deletedIdsRef.current.has(p.id)
+          )
+        );
+      } else if (key === 'candidates') {
+        setCandidates((prev) =>
+          mergeProfilesSmart(prev, payload as Profile[]).filter(
+            (p) => !deletedIdsRef.current.has(p.id)
+          )
+        );
+      } else if (key === 'evaluations') {
+        setEvaluations((prev) =>
+          mergeArraysById(prev, payload as Evaluation[])
+        );
+      } else if (key === 'scores') {
+        setEvaluationScores((prev) =>
+          mergeScoresArrays(prev, payload as EvaluationScore[])
+        );
+      } else if (key === 'audit_logs') {
+        const incomingLogs = payload as AuditLog[];
+        if (incomingLogs.length === 0) {
+          setAuditLogs([]);
+        } else {
+          setAuditLogs((prev) => mergeArraysById(prev, incomingLogs));
+        }
+      }
+    } finally {
+      setTimeout(() => {
+        isApplyingRemoteRef.current = false;
+      }, 150);
+    }
+  };
+
+  const syncWithCloudNow = async (): Promise<{
+    evaluationsCount: number;
+    synced: boolean;
+  }> => {
+    if (!isSupabaseConfigured) {
+      return { evaluationsCount: evaluationsRef.current.length, synced: false };
+    }
+    try {
+      const { data, error } = await supabase
+        .from('cmn_shared_state')
+        .select('key, payload');
+      if (error || !Array.isArray(data)) {
+        return { evaluationsCount: evaluationsRef.current.length, synced: false };
+      }
+
+      if (data.length === 0) {
+        const nowIso = new Date().toISOString();
+        await Promise.all([
+          supabase.from('cmn_shared_state').upsert({ key: 'mn_directory', payload: mnRef.current, updated_at: nowIso }),
+          supabase.from('cmn_shared_state').upsert({ key: 'candidates', payload: candidatesRef.current, updated_at: nowIso }),
+          supabase.from('cmn_shared_state').upsert({ key: 'evaluations', payload: evaluationsRef.current, updated_at: nowIso }),
+          supabase.from('cmn_shared_state').upsert({ key: 'scores', payload: scoresRef.current, updated_at: nowIso }),
+          supabase.from('cmn_shared_state').upsert({ key: 'audit_logs', payload: auditLogsRef.current, updated_at: nowIso }),
+        ]);
+        hasHydratedCloudRef.current = true;
+        return { evaluationsCount: evaluationsRef.current.length, synced: true };
+      }
+
+      const remoteByKey = new Map<string, unknown>();
+      for (const row of data) {
+        remoteByKey.set(row.key as string, row.payload);
+      }
+      if (remoteByKey.has('deleted_profile_ids')) {
+        applyRemoteRow('deleted_profile_ids', remoteByKey.get('deleted_profile_ids'));
+      }
+      for (const row of data) {
+        if (row.key === 'deleted_profile_ids') continue;
+        applyRemoteRow(row.key as string, row.payload);
+      }
+
+      const nowIso = new Date().toISOString();
+      const upserts: PromiseLike<unknown>[] = [];
+
+      const remoteMn = remoteByKey.get('mn_directory');
+      if (Array.isArray(remoteMn)) {
+        const mergedMn = mergeProfilesSmart(mnRef.current, remoteMn as Profile[]).filter(
+          (p) => !deletedIdsRef.current.has(p.id)
+        );
+        const remoteHasAll = mergedMn.every((m) => {
+          const r = (remoteMn as Profile[]).find((x) => x.id === m.id);
+          return Boolean(r) && (!m.photo_storage_path || Boolean(r?.photo_storage_path));
+        });
+        if (!remoteHasAll) {
+          upserts.push(
+            supabase.from('cmn_shared_state').upsert({ key: 'mn_directory', payload: mergedMn, updated_at: nowIso })
+          );
+        }
+      }
+
+      const remoteCand = remoteByKey.get('candidates');
+      if (Array.isArray(remoteCand)) {
+        const mergedCand = mergeProfilesSmart(candidatesRef.current, remoteCand as Profile[]).filter(
+          (p) => !deletedIdsRef.current.has(p.id)
+        );
+        const remoteHasAll = mergedCand.every((c) => {
+          const r = (remoteCand as Profile[]).find((x) => x.id === c.id);
+          return Boolean(r) && (!c.photo_storage_path || Boolean(r?.photo_storage_path));
+        });
+        if (!remoteHasAll) {
+          upserts.push(
+            supabase.from('cmn_shared_state').upsert({ key: 'candidates', payload: mergedCand, updated_at: nowIso })
+          );
+        }
+      }
+
+      let finalEvalCount = evaluationsRef.current.length;
+      const remoteEvals = remoteByKey.get('evaluations');
+      if (Array.isArray(remoteEvals)) {
+        const mergedEvals = mergeArraysById(evaluationsRef.current, remoteEvals as Evaluation[]);
+        finalEvalCount = mergedEvals.length;
+        if (mergedEvals.length > remoteEvals.length) {
+          upserts.push(
+            supabase.from('cmn_shared_state').upsert({ key: 'evaluations', payload: mergedEvals, updated_at: nowIso })
+          );
+        }
+      }
+
+      const remoteScores = remoteByKey.get('scores');
+      if (Array.isArray(remoteScores)) {
+        const mergedScores = mergeScoresArrays(scoresRef.current, remoteScores as EvaluationScore[]);
+        if (mergedScores.length > remoteScores.length) {
+          upserts.push(
+            supabase.from('cmn_shared_state').upsert({ key: 'scores', payload: mergedScores, updated_at: nowIso })
+          );
+        }
+      }
+
+      if (upserts.length > 0) {
+        await Promise.all(upserts);
+      }
+
+      hasHydratedCloudRef.current = true;
+      return { evaluationsCount: finalEvalCount, synced: true };
+    } catch {
+      return { evaluationsCount: evaluationsRef.current.length, synced: false };
+    }
+  };
+
+  // Synchronisation initiale, au retour sur l'onglet (GSM/PC) et temps réel via Supabase cmn_shared_state
   useEffect(() => {
     if (!isSupabaseConfigured) return;
 
-    let cancelled = false;
+    void syncWithCloudNow();
 
-    const applyRemoteRow = (key: string, payload: unknown): void => {
-      if (!Array.isArray(payload)) return;
-      isApplyingRemoteRef.current = true;
-      try {
-        if (key === 'deleted_profile_ids') {
-          const incomingIds = payload as string[];
-          const nextSet = new Set(incomingIds);
-          deletedIdsRef.current = nextSet;
-          setDeletedProfileIds(Array.from(nextSet));
-          setMnDirectory((prev) => prev.filter((p) => !nextSet.has(p.id)));
-          setCandidates((prev) => prev.filter((p) => !nextSet.has(p.id)));
-        } else if (key === 'archived_profiles') {
-          setArchivedProfiles(payload as Profile[]);
-        } else if (key === 'mn_directory') {
-          setMnDirectory((prev) =>
-            mergeProfilesSmart(prev, payload as Profile[]).filter(
-              (p) => !deletedIdsRef.current.has(p.id)
-            )
-          );
-        } else if (key === 'candidates') {
-          setCandidates((prev) =>
-            mergeProfilesSmart(prev, payload as Profile[]).filter(
-              (p) => !deletedIdsRef.current.has(p.id)
-            )
-          );
-        } else if (key === 'evaluations') {
-          setEvaluations((prev) =>
-            mergeArraysById(prev, payload as Evaluation[])
-          );
-        } else if (key === 'scores') {
-          setEvaluationScores((prev) =>
-            mergeScoresArrays(prev, payload as EvaluationScore[])
-          );
-        } else if (key === 'audit_logs') {
-          const incomingLogs = payload as AuditLog[];
-          if (incomingLogs.length === 0) {
-            setAuditLogs([]);
-          } else {
-            setAuditLogs((prev) => mergeArraysById(prev, incomingLogs));
-          }
-        }
-      } finally {
-        setTimeout(() => {
-          isApplyingRemoteRef.current = false;
-        }, 150);
+    const handleVisibilityOrOnline = (): void => {
+      if (document.visibilityState === 'visible' && navigator.onLine) {
+        void syncWithCloudNow();
       }
     };
 
-    const hydrateFromCloud = async (): Promise<void> => {
-      try {
-        const { data, error } = await supabase
-          .from('cmn_shared_state')
-          .select('key, payload');
-        if (cancelled) return;
-        if (!error && Array.isArray(data) && data.length > 0) {
-          const remoteByKey = new Map<string, unknown>();
-          for (const row of data) {
-            remoteByKey.set(row.key as string, row.payload);
-          }
-          // Appliquer d'abord les profils supprimés pour qu'ils ne réapparaissent jamais
-          if (remoteByKey.has('deleted_profile_ids')) {
-            applyRemoteRow(
-              'deleted_profile_ids',
-              remoteByKey.get('deleted_profile_ids')
-            );
-          }
-          for (const row of data) {
-            if (row.key === 'deleted_profile_ids') continue;
-            applyRemoteRow(row.key as string, row.payload);
-          }
-
-          // Si l'appareil local possède des photos ou profils plus récents absents du cloud, on les republie sans écraser les photos distantes
-          const remoteMn = remoteByKey.get('mn_directory');
-          if (Array.isArray(remoteMn)) {
-            const mergedMn = mergeProfilesSmart(
-              mnDirectory,
-              remoteMn as Profile[]
-            ).filter((p) => !deletedIdsRef.current.has(p.id));
-            const remoteHasAllLocalPhotos = mergedMn.every((m) => {
-              const r = (remoteMn as Profile[]).find((x) => x.id === m.id);
-              return Boolean(r) && (!m.photo_storage_path || Boolean(r?.photo_storage_path));
-            });
-            if (!remoteHasAllLocalPhotos) {
-              void supabase.from('cmn_shared_state').upsert({
-                key: 'mn_directory',
-                payload: mergedMn,
-                updated_at: new Date().toISOString(),
-              });
-            }
-          }
-
-          const remoteCand = remoteByKey.get('candidates');
-          if (Array.isArray(remoteCand)) {
-            const mergedCand = mergeProfilesSmart(
-              candidates,
-              remoteCand as Profile[]
-            ).filter((p) => !deletedIdsRef.current.has(p.id));
-            const remoteHasAllLocalPhotos = mergedCand.every((c) => {
-              const r = (remoteCand as Profile[]).find((x) => x.id === c.id);
-              return Boolean(r) && (!c.photo_storage_path || Boolean(r?.photo_storage_path));
-            });
-            if (!remoteHasAllLocalPhotos) {
-              void supabase.from('cmn_shared_state').upsert({
-                key: 'candidates',
-                payload: mergedCand,
-                updated_at: new Date().toISOString(),
-              });
-            }
-          }
-
-          // Réconciliation bidirectionnelle complète des évaluations et scores (PC <-> GSM)
-          // Si cet appareil possède des évaluations ou notes locales absentes du cloud, on les publie immédiatement
-          const remoteEvals = remoteByKey.get('evaluations');
-          if (Array.isArray(remoteEvals)) {
-            const mergedEvals = mergeArraysById(
-              evaluations,
-              remoteEvals as Evaluation[]
-            );
-            if (mergedEvals.length > remoteEvals.length) {
-              void supabase.from('cmn_shared_state').upsert({
-                key: 'evaluations',
-                payload: mergedEvals,
-                updated_at: new Date().toISOString(),
-              });
-            }
-          }
-
-          const remoteScores = remoteByKey.get('scores');
-          if (Array.isArray(remoteScores)) {
-            const mergedScores = mergeScoresArrays(
-              evaluationScores,
-              remoteScores as EvaluationScore[]
-            );
-            if (mergedScores.length > remoteScores.length) {
-              void supabase.from('cmn_shared_state').upsert({
-                key: 'scores',
-                payload: mergedScores,
-                updated_at: new Date().toISOString(),
-              });
-            }
-          }
-        } else if (!error && Array.isArray(data) && data.length === 0) {
-          // Premier appareil à se connecter sur la table vide : publie immédiatement ses données locales (photos, profils, évaluations)
-          void pushKeyToCloud('mn_directory', mnDirectory);
-          void pushKeyToCloud('candidates', candidates);
-          void pushKeyToCloud('evaluations', evaluations);
-          void pushKeyToCloud('scores', evaluationScores);
-          void pushKeyToCloud('audit_logs', auditLogs);
-        }
-      } finally {
-        if (!cancelled) {
-          hasHydratedCloudRef.current = true;
-        }
-      }
-    };
-
-    void hydrateFromCloud();
+    window.addEventListener('online', handleVisibilityOrOnline);
+    document.addEventListener('visibilitychange', handleVisibilityOrOnline);
 
     const channel = supabase
       .channel('cmn-shared-state-realtime')
@@ -888,7 +908,8 @@ export function AdminStoreProvider({
       .subscribe();
 
     return () => {
-      cancelled = true;
+      window.removeEventListener('online', handleVisibilityOrOnline);
+      document.removeEventListener('visibilitychange', handleVisibilityOrOnline);
       void supabase.removeChannel(channel);
     };
   }, []);
@@ -1305,6 +1326,7 @@ export function AdminStoreProvider({
         restoreProfile,
         purgeArchivedProfile,
         clearAuditLogs,
+        syncWithCloudNow,
       }}
     >
       {children}
