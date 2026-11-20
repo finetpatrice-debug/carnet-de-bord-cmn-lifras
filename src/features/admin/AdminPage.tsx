@@ -201,6 +201,9 @@ export function AdminPage(): React.ReactElement {
   // Affichage du Journal d'Audit : 'collapsed' (replié par défaut), 'compact' (hauteur limitée), 'expanded' (agrandi)
   const [auditViewSize, setAuditViewSize] = useState<'collapsed' | 'compact' | 'expanded'>('collapsed');
 
+  // Affichage de l'Outil de Reclassement (section 1) : replié par défaut à l'ouverture
+  const [reclassifyViewSize, setReclassifyViewSize] = useState<'collapsed' | 'compact' | 'expanded'>('collapsed');
+
   // État pour la modale de reclassement traçable d'une épreuve mal aiguillée
   const [selectedEvaluation, setSelectedEvaluation] = useState<Evaluation | null>(
     null
@@ -541,11 +544,66 @@ export function AdminPage(): React.ReactElement {
       {/* 1. Outil de reclassement traçable d'une épreuve mal aiguillée */}
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-2 text-sky-700">
-            <ArrowRightLeft className="h-5 w-5" />
-            <CardTitle className="text-base">
-              1. Outil de Reclassement Traçable d’une Épreuve Mal Aiguillée
-            </CardTitle>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-sky-700">
+              <ArrowRightLeft className="h-5 w-5" />
+              <CardTitle className="text-base">
+                1. Outil de Reclassement Traçable d’une Épreuve Mal Aiguillée
+              </CardTitle>
+              <Badge variant="secondary" className="text-[11px]">
+                {evaluations.length} évaluation{evaluations.length > 1 ? 's' : ''}
+              </Badge>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Button
+                type="button"
+                size="sm"
+                variant={reclassifyViewSize === 'collapsed' ? 'default' : 'outline'}
+                onClick={() =>
+                  setReclassifyViewSize((prev) =>
+                    prev === 'collapsed' ? 'compact' : 'collapsed'
+                  )
+                }
+                className="h-7 px-2 text-xs"
+              >
+                {reclassifyViewSize === 'collapsed' ? (
+                  <>
+                    <ChevronDown className="h-3.5 w-3.5" />
+                    Déplier
+                  </>
+                ) : (
+                  <>
+                    <ChevronUp className="h-3.5 w-3.5" />
+                    Réduire
+                  </>
+                )}
+              </Button>
+              {reclassifyViewSize !== 'collapsed' && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={reclassifyViewSize === 'expanded' ? 'default' : 'outline'}
+                  onClick={() =>
+                    setReclassifyViewSize((prev) =>
+                      prev === 'expanded' ? 'compact' : 'expanded'
+                    )
+                  }
+                  className="h-7 px-2 text-xs"
+                >
+                  {reclassifyViewSize === 'expanded' ? (
+                    <>
+                      <Minimize2 className="h-3.5 w-3.5" />
+                      Compact
+                    </>
+                  ) : (
+                    <>
+                      <Maximize2 className="h-3.5 w-3.5" />
+                      Agrandir
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
           </div>
           <CardDescription>
             Sélectionnez une évaluation publiée pour la reclasser vers la bonne épreuve
@@ -553,57 +611,65 @@ export function AdminPage(): React.ReactElement {
             <code>Pédagogie AM ou MC</code>) avec mapping assisté des critères communs.
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="border-b bg-slate-50 font-semibold uppercase text-slate-600">
-                  <th className="px-3 py-2.5">Ligne / ID</th>
-                  <th className="px-3 py-2.5">Date</th>
-                  <th className="px-3 py-2.5">Candidat CMN</th>
-                  <th className="px-3 py-2.5">Épreuve Actuelle</th>
-                  <th className="px-3 py-2.5">Jury (Col. F)</th>
-                  <th className="px-3 py-2.5">Commentaire (Col. DD)</th>
-                  <th className="px-3 py-2.5 text-right">Action DTF</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {evaluations.map((ev) => (
-                  <tr key={ev.id} className="hover:bg-slate-50">
-                    <td className="px-3 py-2.5 font-mono font-semibold text-slate-600">
-                      #{ev.legacy_row_id ?? ev.id.slice(0, 8)}
-                    </td>
-                    <td className="px-3 py-2.5 whitespace-nowrap">{ev.event_date}</td>
-                    <td className="px-3 py-2.5 font-medium text-slate-900">
-                      {getCandidateName(ev.candidate_id)}
-                    </td>
-                    <td className="px-3 py-2.5">
-                      <Badge variant="secondary">
-                        {getExamTitle(ev.exam_code)} ({ev.exam_code})
-                      </Badge>
-                    </td>
-                    <td className="px-3 py-2.5 text-slate-600">
-                      {ev.legacy_evaluator_raw ?? '—'}
-                    </td>
-                    <td className="px-3 py-2.5 max-w-xs truncate text-slate-600">
-                      {ev.improvements_comment}
-                    </td>
-                    <td className="px-3 py-2.5 text-right">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => openReclassifyModal(ev)}
-                      >
-                        <ArrowRightLeft className="h-3.5 w-3.5" />
-                        Reclasser l’épreuve
-                      </Button>
-                    </td>
+        {reclassifyViewSize !== 'collapsed' && (
+          <CardContent>
+            <div
+              className={`overflow-x-auto ${
+                reclassifyViewSize === 'compact'
+                  ? 'max-h-80 overflow-y-auto'
+                  : ''
+              }`}
+            >
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b bg-slate-50 font-semibold uppercase text-slate-600">
+                    <th className="px-3 py-2.5">Ligne / ID</th>
+                    <th className="px-3 py-2.5">Date</th>
+                    <th className="px-3 py-2.5">Candidat CMN</th>
+                    <th className="px-3 py-2.5">Épreuve Actuelle</th>
+                    <th className="px-3 py-2.5">Jury (Col. F)</th>
+                    <th className="px-3 py-2.5">Commentaire (Col. DD)</th>
+                    <th className="px-3 py-2.5 text-right">Action DTF</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
+                </thead>
+                <tbody className="divide-y">
+                  {evaluations.map((ev) => (
+                    <tr key={ev.id} className="hover:bg-slate-50">
+                      <td className="px-3 py-2.5 font-mono font-semibold text-slate-600">
+                        #{ev.legacy_row_id ?? ev.id.slice(0, 8)}
+                      </td>
+                      <td className="px-3 py-2.5 whitespace-nowrap">{ev.event_date}</td>
+                      <td className="px-3 py-2.5 font-medium text-slate-900">
+                        {getCandidateName(ev.candidate_id)}
+                      </td>
+                      <td className="px-3 py-2.5">
+                        <Badge variant="secondary">
+                          {getExamTitle(ev.exam_code)} ({ev.exam_code})
+                        </Badge>
+                      </td>
+                      <td className="px-3 py-2.5 text-slate-600">
+                        {ev.legacy_evaluator_raw ?? '—'}
+                      </td>
+                      <td className="px-3 py-2.5 max-w-xs truncate text-slate-600">
+                        {ev.improvements_comment}
+                      </td>
+                      <td className="px-3 py-2.5 text-right">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => openReclassifyModal(ev)}
+                        >
+                          <ArrowRightLeft className="h-3.5 w-3.5" />
+                          Reclasser l’épreuve
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        )}
       </Card>
 
       {/* Modale dédiée au reclassement assisté avec motif obligatoire */}
