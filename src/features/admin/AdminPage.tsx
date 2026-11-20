@@ -314,7 +314,7 @@ export function AdminPage(): React.ReactElement {
             <div className="flex items-center gap-2 text-sky-700">
               <Shield className="h-5 w-5" />
               <CardTitle>
-                Administration DTF — Inscription CMN, Reclassement d’Épreuves, Annuaire MN & Audit Immuable
+                Administration — Inscription CMN, Reclassement d’Épreuves, Annuaire MN & Audit Immuable
               </CardTitle>
             </div>
             <Button
@@ -329,7 +329,7 @@ export function AdminPage(): React.ReactElement {
             </Button>
           </div>
           <CardDescription>
-            Module réservé exclusivement au rôle <strong>ADMIN_DTF</strong>. Aucune
+            Module réservé exclusivement au rôle <strong>Administrateur</strong>. Aucune
             suppression physique d’évaluation publiée : toute correction d’aiguillage
             exige un motif explicite et écrit une trace avant/après en JSONB dans{' '}
             <code>audit_logs</code>.
@@ -656,7 +656,7 @@ export function AdminPage(): React.ReactElement {
                     <th className="px-3 py-2.5">Épreuve Actuelle</th>
                     <th className="px-3 py-2.5">Jury (Col. F)</th>
                     <th className="px-3 py-2.5">Commentaire (Col. DD)</th>
-                    <th className="px-3 py-2.5 text-right">Action DTF</th>
+                    <th className="px-3 py-2.5 text-right">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
