@@ -491,7 +491,7 @@ export function EvaluationPage(): React.ReactElement {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base">
-                1. Candidat CMN évalué (Cohorte active)
+                1. Candidat CMN évalué (Promotion en cours)
               </CardTitle>
               <Badge variant="outline" className="text-[11px]">
                 {activeCohortCandidates.length} CMN actifs
