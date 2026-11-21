@@ -50,6 +50,7 @@ import {
   Bell,
   Sun,
   Moon,
+  UserCog,
 } from 'lucide-react';
 
 interface NavItem {
@@ -495,16 +496,16 @@ export function ProtectedLayout(): React.ReactElement {
               type="button"
               onClick={() => setShowMyProfileModal(true)}
               title="Gérer mes données personnelles (statut verrouillé)"
-              className="flex items-center gap-2 rounded-lg px-1.5 py-1 transition hover:bg-slate-800"
+              className="flex items-center gap-2 rounded-lg border border-sky-500/40 bg-slate-800/90 px-2 py-1 transition hover:border-sky-400 hover:bg-slate-700"
             >
               {profile.photo_storage_path ? (
                 <img
                   src={profile.photo_storage_path}
                   alt={`${profile.first_name} ${profile.last_name}`}
-                  className="h-8 w-8 rounded-full border border-sky-400 object-cover"
+                  className="h-7 w-7 rounded-full border border-sky-400 object-cover"
                 />
               ) : (
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-sky-700 text-xs font-bold text-white">
+                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-sky-700 text-xs font-bold text-white">
                   {`${profile.first_name.charAt(0)}${profile.last_name.charAt(0)}`.toUpperCase()}
                 </div>
               )}
@@ -523,6 +524,7 @@ export function ProtectedLayout(): React.ReactElement {
                     : (profile.febras_number ?? 'N/A')}
                 </div>
               </div>
+              <UserCog className="h-3.5 w-3.5 text-sky-300" />
             </button>
 
             <Button

@@ -1386,7 +1386,14 @@ export function AdminPage(): React.ReactElement {
 
           {(profilesListExpanded || profileSearchQuery.trim().length > 0) && (
             <div className="grid gap-4 md:grid-cols-2">
-              {[...mnDirectory, ...candidates]
+              {Array.from(
+                new Map(
+                  [...mnDirectory, ...candidates].map((p) => [
+                    (p.email || p.id).trim().toLowerCase(),
+                    p,
+                  ])
+                ).values()
+              )
                 .filter((mn) => {
                   const q = profileSearchQuery.trim().toLowerCase();
                   if (!q) return true;

@@ -605,20 +605,30 @@ function mergeArraysById<T extends { id: string }>(
 }
 
 function mergeProfilesSmart(base: Profile[], incoming: Profile[]): Profile[] {
-  const byId = new Map<string, Profile>();
-  for (const item of base) {
-    byId.set(item.id, item);
-  }
-  for (const inc of incoming) {
-    const existing = byId.get(inc.id);
+  const byKey = new Map<string, Profile>();
+
+  const getDedupKey = (p: Profile): string => {
+    const emailNorm = (p.email ?? '').trim().toLowerCase();
+    return emailNorm || p.id;
+  };
+
+  const upsertProfile = (inc: Profile): void => {
+    const key = getDedupKey(inc);
+    const existing = byKey.get(key);
     if (!existing) {
-      byId.set(inc.id, inc);
-      continue;
+      byKey.set(key, inc);
+      return;
     }
     const existingTs = Date.parse(existing.updated_at || '') || 0;
     const incomingTs = Date.parse(inc.updated_at || '') || 0;
     const winner = incomingTs >= existingTs ? inc : existing;
     const loser = incomingTs >= existingTs ? existing : inc;
+
+    // Préserver l'ID canonique (cand-* ou mn-*) pour ne jamais casser le lien avec les évaluations
+    const canonicalId =
+      existing.id.startsWith('cand-') || existing.id.startsWith('mn-')
+        ? existing.id
+        : inc.id;
 
     // Ne jamais écraser une photo existante par null lors d'une synchronisation multi-appareils
     const preservedPhoto =
@@ -628,13 +638,21 @@ function mergeProfilesSmart(base: Profile[], incoming: Profile[]): Profile[] {
       new Set([...(existing.aliases ?? []), ...(inc.aliases ?? [])])
     );
 
-    byId.set(inc.id, {
+    byKey.set(key, {
       ...winner,
+      id: canonicalId,
       photo_storage_path: preservedPhoto,
       aliases: mergedAliases,
     });
+  };
+
+  for (const item of base) {
+    upsertProfile(item);
   }
-  return Array.from(byId.values());
+  for (const inc of incoming) {
+    upsertProfile(inc);
+  }
+  return Array.from(byKey.values());
 }
 
 function mergeScoresArrays(
@@ -674,16 +692,16 @@ export function AdminStoreProvider({
     return loadAndMergeById(
       STORAGE_KEYS.MN_DIRECTORY,
       INITIAL_MN_DIRECTORY
-    ).filter((p) => !deleted.has(p.id));
+    ).filter((p) => !deleted.has(p.id) && p.role !== 'CMN_CANDIDATE');
   });
   const [candidates, setCandidates] = useState<Profile[]>(() => {
     const deleted = new Set(
       loadFromStorage<string[]>(STORAGE_KEYS.DELETED_PROFILES, [])
     );
-    return loadAndMergeById(
-      STORAGE_KEYS.CANDIDATES,
-      INITIAL_CANDIDATES
-    ).filter((p) => !deleted.has(p.id));
+    return mergeProfilesSmart(
+      INITIAL_CANDIDATES,
+      loadAndMergeById(STORAGE_KEYS.CANDIDATES, INITIAL_CANDIDATES)
+    ).filter((p) => !deleted.has(p.id) && p.role === 'CMN_CANDIDATE');
   });
   const [evaluations, setEvaluations] = useState<Evaluation[]>(() =>
     loadAndMergeById(STORAGE_KEYS.EVALUATIONS, INITIAL_DATASET.evaluations)
@@ -740,13 +758,13 @@ export function AdminStoreProvider({
       } else if (key === 'mn_directory') {
         setMnDirectory((prev) =>
           mergeProfilesSmart(prev, payload as Profile[]).filter(
-            (p) => !deletedIdsRef.current.has(p.id)
+            (p) => !deletedIdsRef.current.has(p.id) && p.role !== 'CMN_CANDIDATE'
           )
         );
       } else if (key === 'candidates') {
         setCandidates((prev) =>
           mergeProfilesSmart(prev, payload as Profile[]).filter(
-            (p) => !deletedIdsRef.current.has(p.id)
+            (p) => !deletedIdsRef.current.has(p.id) && p.role === 'CMN_CANDIDATE'
           )
         );
       } else if (key === 'evaluations') {
@@ -818,13 +836,16 @@ export function AdminStoreProvider({
       const remoteMn = remoteByKey.get('mn_directory');
       if (Array.isArray(remoteMn)) {
         const mergedMn = mergeProfilesSmart(mnRef.current, remoteMn as Profile[]).filter(
-          (p) => !deletedIdsRef.current.has(p.id)
+          (p) => !deletedIdsRef.current.has(p.id) && p.role !== 'CMN_CANDIDATE'
+        );
+        const remoteHasMisplacedCand = (remoteMn as Profile[]).some(
+          (x) => x.role === 'CMN_CANDIDATE'
         );
         const remoteHasAll = mergedMn.every((m) => {
           const r = (remoteMn as Profile[]).find((x) => x.id === m.id);
           return Boolean(r) && (!m.photo_storage_path || Boolean(r?.photo_storage_path));
         });
-        if (!remoteHasAll) {
+        if (!remoteHasAll || remoteHasMisplacedCand) {
           upserts.push(
             supabase.from('cmn_shared_state').upsert({ key: 'mn_directory', payload: mergedMn, updated_at: nowIso })
           );
@@ -834,13 +855,13 @@ export function AdminStoreProvider({
       const remoteCand = remoteByKey.get('candidates');
       if (Array.isArray(remoteCand)) {
         const mergedCand = mergeProfilesSmart(candidatesRef.current, remoteCand as Profile[]).filter(
-          (p) => !deletedIdsRef.current.has(p.id)
+          (p) => !deletedIdsRef.current.has(p.id) && p.role === 'CMN_CANDIDATE'
         );
         const remoteHasAll = mergedCand.every((c) => {
           const r = (remoteCand as Profile[]).find((x) => x.id === c.id);
           return Boolean(r) && (!c.photo_storage_path || Boolean(r?.photo_storage_path));
         });
-        if (!remoteHasAll) {
+        if (!remoteHasAll || mergedCand.length !== remoteCand.length) {
           upserts.push(
             supabase.from('cmn_shared_state').upsert({ key: 'candidates', payload: mergedCand, updated_at: nowIso })
           );
