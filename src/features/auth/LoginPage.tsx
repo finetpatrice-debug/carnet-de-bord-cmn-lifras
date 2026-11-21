@@ -118,13 +118,19 @@ export function LoginPage(): React.ReactElement {
 
   return (
     <div className="relative flex min-h-[100dvh] flex-col justify-between overflow-x-hidden bg-slate-950 p-3 sm:p-5 md:px-10 md:py-4 lg:px-14">
-      {/* 1. PC & Tablette (md+) : Image officielle en fond d'écran plein cadre net (plongeur parfaitement dégagé à droite) */}
-      <img
-        src="/Cover Carnet de Bord light.jpg?v=2.0.0-cover2"
-        alt=""
+      {/* 1. PC & Tablette (md+) : Vidéo officielle en fond d'écran plein cadre en boucle fluide (avec photo poster immédiate) */}
+      <video
+        autoPlay
+        loop
+        muted
+        playsInline
+        preload="auto"
+        poster="/Cover Carnet de Bord light.jpg?v=2.0.0-cover2"
         aria-hidden="true"
         className="pointer-events-none fixed inset-0 hidden md:block h-full w-full object-cover object-right"
-      />
+      >
+        <source src="/accueil-cmn-video.mp4?v=2.0.6" type="video/mp4" />
+      </video>
       <div
         aria-hidden="true"
         className="pointer-events-none fixed inset-0 hidden md:block bg-gradient-to-r from-slate-950/60 via-slate-950/20 to-transparent"
@@ -160,13 +166,20 @@ export function LoginPage(): React.ReactElement {
 
       {/* Conteneur principal : centré sur GSM, recentré verticalement (entre le haut et le bas) et équilibré entre bord gauche et plongeur sur PC */}
       <div className="relative z-10 mx-auto md:mx-0 md:my-auto md:ml-[6%] lg:ml-[9%] xl:ml-[11%] w-full max-w-md lg:max-w-[440px] space-y-2.5 md:space-y-3 py-2">
-        {/* Bandeau photo affiché UNIQUEMENT sur GSM (< md) */}
+        {/* Bandeau vidéo affiché UNIQUEMENT sur GSM (< md), en boucle silencieuse avec poster immédiat */}
         <div className="relative overflow-hidden rounded-xl border border-sky-400/30 shadow-xl md:hidden">
-          <img
-            src="/Cover Carnet de Bord light.jpg?v=2.0.0-cover2"
-            alt="Moniteur National LIFRAS face à la mer — Carnet de Bord Digital CMN"
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="auto"
+            poster="/Cover Carnet de Bord light.jpg?v=2.0.0-cover2"
+            aria-label="Moniteur National LIFRAS face à la mer — Carnet de Bord Digital CMN"
             className="h-40 sm:h-44 w-full object-cover object-[65%_22%]"
-          />
+          >
+            <source src="/accueil-cmn-video.mp4?v=2.0.6" type="video/mp4" />
+          </video>
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/25 to-transparent" />
           <div className="absolute bottom-0 left-0 right-0 flex items-end justify-between gap-1.5 px-2.5 py-2">
             <div className="flex items-center gap-2 min-w-0 flex-1">
