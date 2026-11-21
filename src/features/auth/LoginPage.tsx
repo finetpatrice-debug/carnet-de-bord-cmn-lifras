@@ -248,7 +248,7 @@ export function LoginPage(): React.ReactElement {
                 }`}
               >
                 {mode === 'SIGN_IN' &&
-                  'Réservé aux membres pré-enregistrés par l’administrateur LIFRAS.'}
+                  'Réservé aux membres pré-enregistrés par l’administrateur de l’application.'}
                 {mode === 'FIRST_ACCESS' &&
                   'Saisissez votre adresse e-mail pré-enregistrée et choisissez votre mot de passe (sans e-mail de confirmation).'}
                 {mode === 'FORGOT_PASSWORD' &&
@@ -403,7 +403,7 @@ export function LoginPage(): React.ReactElement {
               >
                 <div className="rounded-md border border-sky-200 bg-sky-50 p-2.5 text-[11px] text-sky-900">
                   Seules les adresses e-mail préalablement enregistrées par
-                  l’administrateur LIFRAS peuvent activer un accès. Aucun e-mail
+                  l’administrateur de l’application peuvent activer un accès. Aucun e-mail
                   de confirmation n’est envoyé.
                 </div>
 
@@ -519,7 +519,7 @@ export function LoginPage(): React.ReactElement {
               <div className="space-y-3">
                 <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-950 space-y-1.5">
                   <div className="font-bold text-amber-900">
-                    Réinitialisation gérée par un Administrateur LIFRAS
+                    Réinitialisation gérée par un Administrateur de l’application
                   </div>
                   <p>
                     Par sécurité et sans envoi d’e-mail automatique, demandez à
