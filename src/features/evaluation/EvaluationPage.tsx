@@ -172,11 +172,8 @@ export function EvaluationPage(): React.ReactElement {
   const [searchParams] = useSearchParams();
   const initialCandidateFromUrl = searchParams.get('candidat');
 
-  const [selectedCandidateId, setSelectedCandidateId] = useState<string>(
-    () =>
-      initialCandidateFromUrl ??
-      activeCohortCandidates[0]?.id ??
-      'cand-thomas-peeters'
+  const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(
+    () => initialCandidateFromUrl ?? null
   );
 
   useEffect(() => {
@@ -361,7 +358,7 @@ export function EvaluationPage(): React.ReactElement {
 
   const handleSubmitEvaluation = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
-    if (!canSubmit) return;
+    if (!canSubmit || !selectedCandidateId) return;
 
     setSubmitting(true);
     setSubmissionFeedback(null);
@@ -431,8 +428,9 @@ export function EvaluationPage(): React.ReactElement {
   };
 
   return (
-    <div className="mx-auto max-w-3xl space-y-5 pb-12">
-      {/* Barre de progression collante Mobile-First en haut d'écran */}
+    <div className="mx-auto max-w-4xl space-y-5 pb-12">
+      {/* Barre de progression collante Mobile-First en haut d'écran (uniquement après sélection d'un candidat) */}
+      {selectedCandidateId && (
       <div className="sticky top-[54px] md:top-[104px] z-20 rounded-xl border border-slate-200 bg-white/95 p-3.5 shadow-md backdrop-blur">
         <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
           <div className="flex items-center gap-2 font-semibold text-slate-900">
@@ -483,6 +481,7 @@ export function EvaluationPage(): React.ReactElement {
           />
         </div>
       </div>
+      )}
 
       {submissionFeedback && (
         <div
@@ -517,18 +516,24 @@ export function EvaluationPage(): React.ReactElement {
               </Badge>
             </div>
             <CardDescription>
-              Sélectionnez le candidat d’un simple toucher (photo & club affilié).
+              {selectedCandidateId
+                ? 'Candidat sélectionné : remplissez la grille d’évaluation ci-dessous (cliquez sur un autre candidat pour changer).'
+                : 'Sélectionnez un candidat de la promotion en cours pour ouvrir sa grille d’évaluation terrain.'}
             </CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-2.5 sm:grid-cols-3">
+          <CardContent className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4">
             {activeCohortCandidates.map((cand) => {
               const isSelected = cand.id === selectedCandidateId;
               return (
                 <button
                   key={cand.id}
                   type="button"
-                  onClick={() => setSelectedCandidateId(cand.id)}
-                  className={`flex items-center gap-3 rounded-xl border p-3 text-left transition ${
+                  onClick={() =>
+                    setSelectedCandidateId((prev) =>
+                      prev === cand.id ? null : cand.id
+                    )
+                  }
+                  className={`flex min-w-0 items-center gap-2.5 rounded-xl border p-2.5 text-left transition ${
                     isSelected
                       ? 'border-sky-600 bg-sky-50/90 ring-2 ring-sky-500/40 shadow-sm'
                       : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
@@ -568,6 +573,8 @@ export function EvaluationPage(): React.ReactElement {
           </CardContent>
         </Card>
 
+        {selectedCandidateId && (
+        <>
         {/* 2. Jury MN (Co-examinateurs via puces auto-complétées, zéro texte libre) & Date */}
         <Card>
           <CardHeader className="pb-3">
@@ -1023,6 +1030,8 @@ export function EvaluationPage(): React.ReactElement {
             </Button>
           </CardContent>
         </Card>
+        </>
+        )}
       </form>
     </div>
   );
