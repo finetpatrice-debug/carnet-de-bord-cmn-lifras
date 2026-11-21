@@ -702,17 +702,17 @@ export function ProtectedLayout(): React.ReactElement {
       )}
 
       {/* Pied de page réglementaire (PC) */}
-      <footer className="hidden md:flex items-center justify-center flex-wrap gap-x-2 gap-y-1 border-t border-slate-200 bg-white px-4 py-3 text-center text-xs text-slate-500">
+      <footer className="hidden md:flex items-center justify-center flex-wrap gap-x-2 gap-y-1 border-t border-slate-200 bg-white px-4 py-2.5 text-center text-xs text-slate-500">
         <span>
           Commission de l’Enseignement LIFRAS — Carnet de Bord Digital CMN ({APP_VERSION}) •
           Moteur certifié Iso-Excel (`src/domain/scoringEngine.ts`) • RLS 100 % activé
         </span>
-        <span className="inline-flex items-center gap-1 ml-1">
-          <span className="text-[10px] font-medium text-slate-500">By</span>
+        <span className="inline-flex items-center gap-1.5 ml-1">
+          <span className="text-xs font-medium text-slate-600">By</span>
           <img
-            src="/logo-dtf.jpg?v=2.0.15"
+            src="/logo-dtf.jpg?v=2.0.16"
             alt="Diving Technical Framework"
-            className="h-5 w-auto rounded-[3px] object-contain opacity-90 shadow-sm"
+            className="h-8 w-auto rounded object-contain shadow-sm"
           />
         </span>
       </footer>

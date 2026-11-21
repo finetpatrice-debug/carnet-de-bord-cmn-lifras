@@ -543,15 +543,15 @@ export function LoginPage(): React.ReactElement {
         </div>
       </div>
 
-      {/* Signature concepteur tout en bas centré sur l'écran d'accueil GSM (format discret) */}
-      <div className="relative z-10 flex md:hidden items-center justify-center gap-1.5 pt-3 pb-1">
-        <span className="text-[10px] font-medium tracking-wide text-slate-400">
+      {/* Signature concepteur tout en bas centré sur l'écran d'accueil GSM (format discret et lisible) */}
+      <div className="relative z-10 flex md:hidden items-center justify-center gap-2 pt-3 pb-1">
+        <span className="text-xs font-medium tracking-wide text-slate-300">
           By
         </span>
         <img
-          src="/logo-dtf.jpg?v=2.0.15"
+          src="/logo-dtf.jpg?v=2.0.16"
           alt="Diving Technical Framework"
-          className="h-5 w-auto rounded-[3px] border border-sky-400/20 object-contain opacity-90 shadow-sm"
+          className="h-8 w-auto rounded border border-sky-400/25 object-contain shadow-sm"
         />
       </div>
     </div>
