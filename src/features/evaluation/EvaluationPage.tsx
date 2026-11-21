@@ -47,7 +47,6 @@ import {
   Send,
   UserCheck,
   Users,
-  WifiOff,
   X,
 } from 'lucide-react';
 
@@ -212,8 +211,7 @@ export function EvaluationPage(): React.ReactElement {
   const [strengthsComment, setStrengthsComment] = useState<string>('');
   const [improvementsComment, setImprovementsComment] = useState<string>('');
 
-  // Mode test hors-ligne simulé + retours de soumission
-  const [simulateOffline, setSimulateOffline] = useState<boolean>(false);
+  // Retours de soumission
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [submissionFeedback, setSubmissionFeedback] = useState<{
     type: 'SYNCED' | 'QUEUED_OFFLINE';
@@ -409,7 +407,6 @@ export function EvaluationPage(): React.ReactElement {
         created_at: nowIso,
       },
       {
-        forceOffline: simulateOffline,
         onSyncedToStore: recordFieldEvaluation,
       }
     );
@@ -462,21 +459,6 @@ export function EvaluationPage(): React.ReactElement {
                 <span>Reset grille</span>
               </button>
             )}
-            <button
-              type="button"
-              onClick={() => setSimulateOffline((prev) => !prev)}
-              className={`flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-medium transition ${
-                simulateOffline
-                  ? 'border-amber-500 bg-amber-100 text-amber-900'
-                  : 'border-slate-200 bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
-              title="Permet de tester la mise en file d'attente hors-ligne outbox_evaluations même sur un poste connecté"
-            >
-              <WifiOff className="h-3 w-3" />
-              <span>
-                {simulateOffline ? 'Test Hors-Ligne ACTIF' : 'Simuler Hors-Ligne'}
-              </span>
-            </button>
           </div>
         </div>
         <div className="mt-2 h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
