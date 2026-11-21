@@ -27,6 +27,7 @@ interface AuthContextValue {
   }>;
   signOut: () => Promise<void>;
   switchDemoRole: (role: UserRole) => void;
+  updateOwnProfile: (updated: Profile) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -384,6 +385,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
     setProfile(DEMO_PROFILES[role]);
   };
 
+  const updateOwnProfile = (updated: Profile): void => {
+    setProfile((prev) => {
+      if (!prev) return prev;
+      // Double barrière de sécurité : impossible pour un utilisateur de modifier son statut/rôle ou son e-mail
+      const safe: Profile = {
+        ...updated,
+        id: prev.id,
+        role: prev.role,
+        email: prev.email,
+      };
+      if (!isDemoMode) {
+        saveAuthorizedSession(safe);
+      }
+      return safe;
+    });
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -397,6 +415,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
         activateAuthorizedAccess,
         signOut,
         switchDemoRole,
+        updateOwnProfile,
       }}
     >
       {children}

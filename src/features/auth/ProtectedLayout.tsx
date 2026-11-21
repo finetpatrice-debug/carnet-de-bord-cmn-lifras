@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useAuth } from './AuthContext';
+import { MyProfileModal } from './MyProfileModal';
 import { isCreatorAccount, useAdminStore } from '@/features/admin/AdminStoreContext';
 import {
   flushOutboxEvaluations,
@@ -99,8 +100,8 @@ const ALL_ROLES: UserRole[] = [
 const PUBLIC_APP_URL = 'https://carnet-de-bord-cmn.web.app';
 
 export function ProtectedLayout(): React.ReactElement {
-  const { profile, isDemoMode, switchDemoRole, signOut } = useAuth();
-  const { candidates, mnDirectory, recordFieldEvaluation } = useAdminStore();
+  const { profile, isDemoMode, switchDemoRole, signOut, updateOwnProfile } = useAuth();
+  const { candidates, mnDirectory, recordFieldEvaluation, updateFullProfile } = useAdminStore();
   const navigate = useNavigate();
 
   const [isOnline, setIsOnline] = useState<boolean>(
@@ -108,6 +109,7 @@ export function ProtectedLayout(): React.ReactElement {
   );
   const [isFlushing, setIsFlushing] = useState<boolean>(false);
   const [showQrModal, setShowQrModal] = useState<boolean>(false);
+  const [showMyProfileModal, setShowMyProfileModal] = useState<boolean>(false);
   const [copiedUrl, setCopiedUrl] = useState<boolean>(false);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
   const [showNotifPanel, setShowNotifPanel] = useState<boolean>(false);
@@ -200,9 +202,12 @@ export function ProtectedLayout(): React.ReactElement {
       setIsFullscreen(Boolean(document.fullscreenElement));
 
     window.addEventListener('cmn-notification-added', refreshNotifs);
+    const openMyProfile = (): void => setShowMyProfileModal(true);
+    window.addEventListener('cmn-open-my-profile', openMyProfile);
     document.addEventListener('fullscreenchange', handleFsChange);
     return () => {
       window.removeEventListener('cmn-notification-added', refreshNotifs);
+      window.removeEventListener('cmn-open-my-profile', openMyProfile);
       document.removeEventListener('fullscreenchange', handleFsChange);
     };
   }, []);
@@ -486,7 +491,12 @@ export function ProtectedLayout(): React.ReactElement {
               </select>
             )}
 
-            <div className="hidden sm:flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowMyProfileModal(true)}
+              title="Gérer mes données personnelles (statut verrouillé)"
+              className="flex items-center gap-2 rounded-lg px-1.5 py-1 transition hover:bg-slate-800"
+            >
               {profile.photo_storage_path ? (
                 <img
                   src={profile.photo_storage_path}
@@ -513,7 +523,7 @@ export function ProtectedLayout(): React.ReactElement {
                     : (profile.febras_number ?? 'N/A')}
                 </div>
               </div>
-            </div>
+            </button>
 
             <Button
               variant="ghost"
@@ -676,6 +686,18 @@ export function ProtectedLayout(): React.ReactElement {
           <span>QR Code</span>
         </button>
       </nav>
+
+      {/* Modale Mes données personnelles (accessible à tous les rôles, statut strictement verrouillé) */}
+      {showMyProfileModal && (
+        <MyProfileModal
+          profile={profile}
+          onClose={() => setShowMyProfileModal(false)}
+          onSave={(updated) => {
+            updateFullProfile(updated, profile.id);
+            updateOwnProfile(updated);
+          }}
+        />
+      )}
 
       {/* Pied de page réglementaire (PC) */}
       <footer className="hidden md:block border-t border-slate-200 bg-white py-4 text-center text-xs text-slate-500">

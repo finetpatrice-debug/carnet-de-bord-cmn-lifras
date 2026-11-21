@@ -66,6 +66,7 @@ import {
   Radar as RadarIcon,
   Search,
   TrendingUp,
+  UserCog,
   Users,
 } from 'lucide-react';
 
@@ -565,7 +566,20 @@ export function DashboardPage(): React.ReactElement {
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
-            {!isCandidateSelf && (
+            {isCandidateSelf ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  window.dispatchEvent(new Event('cmn-open-my-profile'))
+                }
+                className="h-9 border-sky-300 bg-sky-50 text-xs font-bold text-sky-900 hover:bg-sky-100"
+              >
+                <UserCog className="h-4 w-4" />
+                Mes données personnelles
+              </Button>
+            ) : (
               <Button
                 type="button"
                 variant="outline"
