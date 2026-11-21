@@ -184,26 +184,24 @@ export function LoginPage(): React.ReactElement {
           >
             <source src="/accueil-cmn-video.mp4?v=2.0.6" type="video/mp4" />
           </video>
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/25 to-transparent" />
-          <div className="absolute bottom-0 left-0 right-0 flex items-end justify-between gap-1.5 px-2.5 py-2">
-            <div className="flex items-center gap-2 min-w-0 flex-1">
-              <img
-                src="/logo-lifras.jpg"
-                alt="Logo Officiel LIFRAS"
-                className="h-9 w-9 shrink-0 rounded-full border-2 border-sky-400 bg-white object-cover shadow-md"
-              />
-              <div className="min-w-0 flex-1">
-                <div className="text-[9px] leading-tight font-extrabold uppercase tracking-tight text-sky-300">
-                  Commission de l’Enseignement — LIFRAS
-                </div>
-                <h1 className="text-sm leading-tight font-extrabold tracking-tight text-white drop-shadow">
-                  Carnet de Bord Digital CMN
-                </h1>
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-transparent" />
+          <Badge className="absolute top-2 right-2 border border-emerald-400/50 bg-slate-950/70 px-1.5 py-0.5 font-mono text-[10px] text-emerald-200 backdrop-blur-sm">
+            {APP_VERSION}
+          </Badge>
+          <div className="absolute bottom-0 left-0 right-0 flex items-center justify-center gap-3 px-3 py-3">
+            <img
+              src="/logo-lifras.jpg"
+              alt="Logo Officiel LIFRAS"
+              className="h-12 w-12 shrink-0 rounded-full border-2 border-sky-400 bg-white object-cover shadow-lg"
+            />
+            <div className="min-w-0 text-center">
+              <div className="text-[11px] leading-snug font-extrabold uppercase tracking-wide text-sky-300 drop-shadow">
+                Commission de l’Enseignement — LIFRAS
               </div>
+              <h1 className="text-base sm:text-lg leading-tight font-extrabold tracking-tight text-white drop-shadow-md">
+                Carnet de Bord Digital CMN
+              </h1>
             </div>
-            <Badge className="shrink-0 border border-emerald-400/50 bg-emerald-500/25 px-1.5 py-0.5 font-mono text-[10px] text-emerald-200 backdrop-blur-sm">
-              {APP_VERSION}
-            </Badge>
           </div>
         </div>
 
