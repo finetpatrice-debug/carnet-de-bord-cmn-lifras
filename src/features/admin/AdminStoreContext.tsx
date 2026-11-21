@@ -19,6 +19,10 @@ import {
   VALERIE_GASPAR_SCORES,
 } from './valerieGasparDataset';
 import { OFFICIAL_MN_DIRECTORY_PROFILES } from './officialMnDirectory';
+import {
+  ensureDailyAutoBackup,
+  type BackupSnapshotPayload,
+} from '@/services/backupService';
 
 interface AdminStoreContextValue {
   mnDirectory: Profile[];
@@ -57,6 +61,10 @@ interface AdminStoreContextValue {
   restoreProfile: (profileId: string, actorEmail: string, actorId: string) => void;
   purgeArchivedProfile: (profileId: string, actorEmail: string, actorId: string) => void;
   clearAuditLogs: (actorEmail: string, actorId: string) => void;
+  restoreFromBackupSnapshot: (
+    snapshot: BackupSnapshotPayload,
+    actorId: string
+  ) => Promise<void>;
   syncWithCloudNow: () => Promise<{ evaluationsCount: number; synced: boolean }>;
 }
 
@@ -728,6 +736,7 @@ export function AdminStoreProvider({
   // Drapeaux pour éviter les boucles de ré-émission lors d'une réception Realtime depuis Supabase
   const isApplyingRemoteRef = useRef<boolean>(false);
   const hasHydratedCloudRef = useRef<boolean>(false);
+  const hasCheckedDailyBackupRef = useRef<boolean>(false);
 
   const pushKeyToCloud = async (key: string, payload: unknown): Promise<void> => {
     if (!isSupabaseConfigured || isApplyingRemoteRef.current) return;
@@ -895,6 +904,19 @@ export function AdminStoreProvider({
       }
 
       hasHydratedCloudRef.current = true;
+
+      if (!hasCheckedDailyBackupRef.current) {
+        hasCheckedDailyBackupRef.current = true;
+        setTimeout(() => {
+          void ensureDailyAutoBackup({
+            candidates: candidatesRef.current,
+            evaluations: evaluationsRef.current,
+            scores: scoresRef.current,
+            mn_directory: mnRef.current,
+          });
+        }, 1500);
+      }
+
       return { evaluationsCount: finalEvalCount, synced: true };
     } catch {
       return { evaluationsCount: evaluationsRef.current.length, synced: false };
@@ -1329,6 +1351,74 @@ export function AdminStoreProvider({
     }
   };
 
+  const restoreFromBackupSnapshot = async (
+    snapshot: BackupSnapshotPayload,
+    actorId: string
+  ): Promise<void> => {
+    const restoredCandidates = Array.isArray(snapshot.candidates)
+      ? snapshot.candidates
+      : candidatesRef.current;
+    const restoredEvaluations = Array.isArray(snapshot.evaluations)
+      ? snapshot.evaluations
+      : evaluationsRef.current;
+    const restoredScores = Array.isArray(snapshot.scores)
+      ? snapshot.scores
+      : scoresRef.current;
+    const restoredMn = Array.isArray(snapshot.mn_directory)
+      ? snapshot.mn_directory
+      : mnRef.current;
+
+    const nowIso = new Date().toISOString();
+    const auditEntry: AuditLog = {
+      id: `audit-restore-${Date.now()}`,
+      actor_id: actorId,
+      action: 'RESTORE_BACKUP',
+      entity_type: 'snapshot',
+      entity_id: snapshot.meta.id,
+      previous_value: {
+        candidates: candidatesRef.current.length,
+        evaluations: evaluationsRef.current.length,
+        scores: scoresRef.current.length,
+      },
+      new_value: snapshot.meta.counts,
+      reason: `Restauration de la sauvegarde Supabase du ${new Date(
+        snapshot.meta.created_at
+      ).toLocaleString('fr-BE')} (${snapshot.meta.label})`,
+      created_at: nowIso,
+    };
+
+    setCandidates(restoredCandidates);
+    setEvaluations(restoredEvaluations);
+    setEvaluationScores(restoredScores);
+    setMnDirectory(restoredMn);
+    setAuditLogs((prev) => [auditEntry, ...prev]);
+
+    if (isSupabaseConfigured) {
+      await Promise.all([
+        supabase.from('cmn_shared_state').upsert({
+          key: 'candidates',
+          payload: restoredCandidates,
+          updated_at: nowIso,
+        }),
+        supabase.from('cmn_shared_state').upsert({
+          key: 'evaluations',
+          payload: restoredEvaluations,
+          updated_at: nowIso,
+        }),
+        supabase.from('cmn_shared_state').upsert({
+          key: 'scores',
+          payload: restoredScores,
+          updated_at: nowIso,
+        }),
+        supabase.from('cmn_shared_state').upsert({
+          key: 'mn_directory',
+          payload: restoredMn,
+          updated_at: nowIso,
+        }),
+      ]);
+    }
+  };
+
   return (
     <AdminStoreContext.Provider
       value={{
@@ -1349,6 +1439,7 @@ export function AdminStoreProvider({
         restoreProfile,
         purgeArchivedProfile,
         clearAuditLogs,
+        restoreFromBackupSnapshot,
         syncWithCloudNow,
       }}
     >

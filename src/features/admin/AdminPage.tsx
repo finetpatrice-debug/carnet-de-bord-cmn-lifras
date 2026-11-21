@@ -13,10 +13,22 @@ import {
   setAuthorizedPassword,
 } from '@/services/authorizedAccessService';
 import {
+  createCloudBackup,
+  deleteCloudBackup,
+  downloadBackupAsJsonFile,
+  listCloudBackups,
+  loadCloudBackupSnapshot,
+  type BackupSnapshotMeta,
+} from '@/services/backupService';
+import {
   buildCriterionMappingProposals,
   executeExamReclassification,
 } from './reclassificationService';
-import { OFFICIAL_CRITERIA, OFFICIAL_EXAM_TYPES } from '@/domain/referentials';
+import {
+  APP_VERSION,
+  OFFICIAL_CRITERIA,
+  OFFICIAL_EXAM_TYPES,
+} from '@/domain/referentials';
 import type {
   AuditLog,
   Evaluation,
@@ -42,6 +54,8 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronUp,
+  Database,
+  Download,
   FileWarning,
   History,
   KeyRound,
@@ -52,6 +66,7 @@ import {
   Radio,
   RefreshCw,
   RotateCcw,
+  Save,
   Search,
   Shield,
   Smartphone,
@@ -81,6 +96,7 @@ export function AdminPage(): React.ReactElement {
     restoreProfile,
     purgeArchivedProfile,
     clearAuditLogs,
+    restoreFromBackupSnapshot,
     syncWithCloudNow,
   } = useAdminStore();
 
@@ -264,6 +280,150 @@ export function AdminPage(): React.ReactElement {
     void refreshConnectionLogs();
     return onOnlineUsersChange(setOnlineUsers);
   }, [isCreator, activeAdmin?.id]);
+
+  // Module Sauvegardes Cloud Supabase (points de restauration datés des données candidats)
+  const [backupsExpanded, setBackupsExpanded] = useState<boolean>(false);
+  const [cloudBackups, setCloudBackups] = useState<BackupSnapshotMeta[]>([]);
+  const [loadingBackups, setLoadingBackups] = useState<boolean>(false);
+  const [isCreatingBackup, setIsCreatingBackup] = useState<boolean>(false);
+  const [restoringBackupId, setRestoringBackupId] = useState<string | null>(null);
+  const [backupFeedbackMsg, setBackupFeedbackMsg] = useState<string | null>(null);
+
+  const refreshCloudBackups = async (): Promise<void> => {
+    setLoadingBackups(true);
+    try {
+      const list = await listCloudBackups();
+      setCloudBackups(list);
+    } finally {
+      setLoadingBackups(false);
+    }
+  };
+
+  useEffect(() => {
+    void refreshCloudBackups();
+  }, []);
+
+  const handleCreateManualBackup = async (): Promise<void> => {
+    setIsCreatingBackup(true);
+    setBackupFeedbackMsg(null);
+    try {
+      const authorName = activeAdmin
+        ? `${activeAdmin.first_name} ${activeAdmin.last_name}`.trim()
+        : 'Administrateur';
+      const res = await createCloudBackup(
+        {
+          candidates,
+          evaluations,
+          scores: evaluationScores,
+          mn_directory: mnDirectory,
+        },
+        {
+          createdBy: authorName,
+          mode: 'MANUAL',
+          label: `Sauvegarde manuelle par ${authorName}`,
+        }
+      );
+      if (res.ok && res.meta) {
+        setBackupFeedbackMsg(
+          `Sauvegarde enregistrée sur Supabase (${res.meta.counts.candidates} candidats, ${res.meta.counts.evaluations} évaluations, ${res.meta.counts.scores} notes).`
+        );
+        await refreshCloudBackups();
+      } else {
+        setBackupFeedbackMsg(
+          res.error ?? 'Impossible de créer la sauvegarde Supabase.'
+        );
+      }
+    } finally {
+      setIsCreatingBackup(false);
+    }
+  };
+
+  const handleDownloadCurrentJsonBackup = (): void => {
+    const nowIso = new Date().toISOString();
+    const authorName = activeAdmin
+      ? `${activeAdmin.first_name} ${activeAdmin.last_name}`.trim()
+      : 'Administrateur';
+    downloadBackupAsJsonFile({
+      meta: {
+        id: `local-${Date.now()}`,
+        created_at: nowIso,
+        created_by: authorName,
+        mode: 'MANUAL',
+        label: 'Export local complet des données candidats',
+        app_version: APP_VERSION,
+        counts: {
+          candidates: candidates.length,
+          evaluations: evaluations.length,
+          scores: evaluationScores.length,
+          mn_directory: mnDirectory.length,
+        },
+      },
+      candidates,
+      evaluations,
+      scores: evaluationScores,
+      mn_directory: mnDirectory,
+    });
+  };
+
+  const handleDownloadSavedBackup = async (backupId: string): Promise<void> => {
+    const snap = await loadCloudBackupSnapshot(backupId);
+    if (!snap) {
+      setBackupFeedbackMsg('Impossible de télécharger cette sauvegarde Supabase.');
+      return;
+    }
+    downloadBackupAsJsonFile(snap);
+  };
+
+  const handleRestoreCloudBackup = async (
+    meta: BackupSnapshotMeta
+  ): Promise<void> => {
+    const confirmed = window.confirm(
+      `Restaurer la sauvegarde Supabase du ${new Date(
+        meta.created_at
+      ).toLocaleString('fr-BE')} ?\n\nContenu : ${meta.counts.candidates} candidats, ${
+        meta.counts.evaluations
+      } évaluations, ${meta.counts.scores} notes.\n\nLes données actuelles seront remplacées par ce point de sauvegarde.`
+    );
+    if (!confirmed) return;
+
+    setRestoringBackupId(meta.id);
+    setBackupFeedbackMsg(null);
+    try {
+      const snap = await loadCloudBackupSnapshot(meta.id);
+      if (!snap) {
+        setBackupFeedbackMsg('Sauvegarde introuvable sur Supabase.');
+        return;
+      }
+      await restoreFromBackupSnapshot(snap, activeAdmin?.id ?? 'admin');
+      setBackupFeedbackMsg(
+        `Sauvegarde du ${new Date(meta.created_at).toLocaleString(
+          'fr-BE'
+        )} restaurée avec succès (${meta.counts.candidates} candidats, ${
+          meta.counts.evaluations
+        } évaluations).`
+      );
+    } finally {
+      setRestoringBackupId(null);
+    }
+  };
+
+  const handleDeleteCloudBackup = async (
+    meta: BackupSnapshotMeta
+  ): Promise<void> => {
+    if (
+      !window.confirm(
+        `Supprimer définitivement la sauvegarde du ${new Date(
+          meta.created_at
+        ).toLocaleString('fr-BE')} ?`
+      )
+    ) {
+      return;
+    }
+    const ok = await deleteCloudBackup(meta.id);
+    if (ok) {
+      await refreshCloudBackups();
+    }
+  };
 
   // État pour la modale de reclassement traçable d'une épreuve mal aiguillée
   const [selectedEvaluation, setSelectedEvaluation] = useState<Evaluation | null>(
@@ -1980,6 +2140,200 @@ export function AdminPage(): React.ReactElement {
                         </div>
                         {JSON.stringify(log.new_value)}
                       </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        )}
+      </Card>
+
+      {/* 4. Sauvegardes Cloud Supabase (Données Candidats & Évaluations) */}
+      <Card className="border-emerald-200">
+        <CardHeader>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-2 text-emerald-700">
+              <Database className="h-5 w-5" />
+              <CardTitle className="text-base">
+                4. Sauvegardes Cloud Supabase (Données Candidats)
+              </CardTitle>
+              <Badge
+                variant="secondary"
+                className="bg-emerald-50 text-emerald-800 border-emerald-200 text-[11px]"
+              >
+                {cloudBackups.length} point{cloudBackups.length > 1 ? 's' : ''} de
+                sauvegarde
+              </Badge>
+              {cloudBackups[0] && (
+                <span className="text-[11px] text-slate-500">
+                  • Dernière :{' '}
+                  {new Date(cloudBackups[0].created_at).toLocaleString('fr-BE')}
+                </span>
+              )}
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => void handleCreateManualBackup()}
+                disabled={isCreatingBackup}
+                className="h-7 bg-emerald-600 px-2.5 text-xs text-white hover:bg-emerald-700"
+              >
+                <Save className="h-3.5 w-3.5" />
+                {isCreatingBackup
+                  ? 'Sauvegarde...'
+                  : 'Sauvegarder sur Supabase'}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={handleDownloadCurrentJsonBackup}
+                title="Télécharger une archive locale complète (.json)"
+                className="h-7 px-2.5 text-xs"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Copie (.json)
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={backupsExpanded ? 'outline' : 'default'}
+                onClick={() => {
+                  setBackupsExpanded((prev) => !prev);
+                  if (!backupsExpanded) void refreshCloudBackups();
+                }}
+                className="h-7 px-2.5 text-xs"
+              >
+                {backupsExpanded ? (
+                  <>
+                    <ChevronUp className="h-3.5 w-3.5" />
+                    Réduire
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown className="h-3.5 w-3.5" />
+                    Historique
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+          <CardDescription>
+            Toutes les fiches candidats (photos, évaluations terrain, notes et
+            imports Excel) sont synchronisées en temps réel sur{' '}
+            <strong>Supabase</strong> et archivées automatiquement en point de
+            restauration toutes les <strong>24 heures</strong> (15 derniers
+            instantanés conservés).
+          </CardDescription>
+          {backupFeedbackMsg && (
+            <div className="mt-2 flex items-center gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-900">
+              <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+              <span>{backupFeedbackMsg}</span>
+            </div>
+          )}
+        </CardHeader>
+        {backupsExpanded && (
+          <CardContent className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
+              <span>
+                État actuel en base :{' '}
+                <strong>{candidates.length} candidats CMN</strong> •{' '}
+                <strong>{evaluations.length} évaluations</strong> •{' '}
+                <strong>{evaluationScores.length} notes</strong> •{' '}
+                <strong>{mnDirectory.length} profils MN/Admin</strong>
+              </span>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => void refreshCloudBackups()}
+                disabled={loadingBackups}
+                className="h-7 px-2 text-xs"
+              >
+                <RefreshCw
+                  className={`h-3.5 w-3.5 ${loadingBackups ? 'animate-spin' : ''}`}
+                />
+                Actualiser
+              </Button>
+            </div>
+
+            {cloudBackups.length === 0 ? (
+              <p className="rounded-lg border border-dashed border-slate-300 p-4 text-center text-xs text-slate-500">
+                Aucun point de sauvegarde daté n’est encore enregistré. Cliquez
+                sur <strong>« Sauvegarder sur Supabase »</strong> ci-dessus pour
+                créer le premier instantané maintenant.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {cloudBackups.map((bkp) => (
+                  <div
+                    key={bkp.id}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white p-3 text-xs shadow-sm"
+                  >
+                    <div className="space-y-0.5 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-bold text-slate-900">
+                          {new Date(bkp.created_at).toLocaleString('fr-BE')}
+                        </span>
+                        <Badge
+                          variant={bkp.mode === 'AUTO' ? 'secondary' : 'default'}
+                          className={
+                            bkp.mode === 'AUTO'
+                              ? 'bg-sky-50 text-sky-800 border-sky-200 text-[10px]'
+                              : 'bg-emerald-600 text-white text-[10px]'
+                          }
+                        >
+                          {bkp.mode === 'AUTO' ? 'Automatique 24h' : 'Manuel'}
+                        </Badge>
+                        <Badge variant="outline" className="font-mono text-[10px]">
+                          {bkp.app_version}
+                        </Badge>
+                      </div>
+                      <div className="text-[11px] text-slate-600">
+                        {bkp.label} —{' '}
+                        <strong>{bkp.counts.candidates}</strong> candidats •{' '}
+                        <strong>{bkp.counts.evaluations}</strong> éval. •{' '}
+                        <strong>{bkp.counts.scores}</strong> notes
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => void handleDownloadSavedBackup(bkp.id)}
+                        className="h-7 px-2 text-xs"
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                        JSON
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={restoringBackupId === bkp.id}
+                        onClick={() => void handleRestoreCloudBackup(bkp)}
+                        className="h-7 border-sky-300 px-2 text-xs text-sky-800 hover:bg-sky-50"
+                      >
+                        <RotateCcw className="h-3.5 w-3.5" />
+                        {restoringBackupId === bkp.id
+                          ? 'Restauration...'
+                          : 'Restaurer'}
+                      </Button>
+                      {isCreator && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => void handleDeleteCloudBackup(bkp)}
+                          title="Supprimer cette sauvegarde"
+                          className="h-7 px-2 text-xs text-red-600 hover:bg-red-50 hover:text-red-700"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
                     </div>
                   </div>
                 ))}

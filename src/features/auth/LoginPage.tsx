@@ -23,6 +23,8 @@ import {
   KeyRound,
   ArrowLeft,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 
 const ROLES_LIST: UserRole[] = [
@@ -43,6 +45,10 @@ export function LoginPage(): React.ReactElement {
   const navigate = useNavigate();
 
   const [mode, setMode] = useState<AuthViewMode>('SIGN_IN');
+  // Sur PC (md+), les deux panneaux arrivent réduits par défaut pour dégager la vidéo d'accueil ; 1 clic pour ouvrir/réduire
+  const [pcAuthExpanded, setPcAuthExpanded] = useState<boolean>(false);
+  const [pcQuickAccessExpanded, setPcQuickAccessExpanded] =
+    useState<boolean>(false);
 
   // Champs Connexion & Activation 1ère connexion
   const [email, setEmail] = useState('');
@@ -204,51 +210,89 @@ export function LoginPage(): React.ReactElement {
 
         {/* Empilement vertical (Connexion & Inscription en haut, Accès rapide juste en dessous) — légèrement abaissé sur GSM pour laisser respirer la vidéo */}
         <div className="flex flex-col gap-2.5 pt-2 md:pt-0 md:gap-3">
-          {/* Carte 1 : Authentification, Inscription & Mot de passe oublié — fond blanc net et écritures à haut contraste */}
-          <Card className="border-slate-200 bg-white shadow-2xl">
-            <CardHeader className="space-y-1 p-3.5 pb-1.5">
-              <CardTitle className="text-base font-extrabold text-slate-950">
-                Accès Sécurisé LIFRAS
-              </CardTitle>
-              <CardDescription className="text-xs font-medium text-slate-700">
-              {mode === 'SIGN_IN' &&
-                'Réservé aux membres pré-enregistrés par l’administrateur LIFRAS.'}
-              {mode === 'FIRST_ACCESS' &&
-                'Saisissez votre adresse e-mail pré-enregistrée et choisissez votre mot de passe (sans e-mail de confirmation).'}
-              {mode === 'FORGOT_PASSWORD' &&
-                'Réinitialisation sécurisée sans envoi d’e-mail.'}
-            </CardDescription>
-
-            {/* Onglets rapides Se connecter / 1ère connexion */}
-            <div className="grid grid-cols-2 gap-1 rounded-lg bg-slate-200/80 p-1">
-              <button
-                type="button"
-                onClick={() => switchMode('SIGN_IN')}
-                className={`flex items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-bold transition ${
-                  mode === 'SIGN_IN'
-                    ? 'bg-sky-700 text-white shadow-sm'
-                    : 'text-slate-800 hover:bg-white/70 hover:text-slate-950'
+          {/* Carte 1 : Authentification, Inscription & Mot de passe oublié — réduite par défaut sur PC (md+), ouverte en 1 clic */}
+          <Card className="border-slate-200 bg-white/95 md:bg-white shadow-2xl">
+            <CardHeader className="space-y-1 p-3.5 pb-2">
+              <div className="flex items-center justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPcAuthExpanded((prev) => !prev)}
+                  className="flex flex-1 items-center gap-2 text-left md:cursor-pointer cursor-default"
+                >
+                  <Lock className="h-4 w-4 shrink-0 text-sky-700" />
+                  <CardTitle className="text-base font-extrabold text-slate-950">
+                    Accès Sécurisé LIFRAS
+                  </CardTitle>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPcAuthExpanded((prev) => !prev)}
+                  className="hidden md:inline-flex items-center gap-1 rounded-md border border-sky-200 bg-sky-50 px-2.5 py-1 text-xs font-bold text-sky-800 transition hover:bg-sky-100"
+                >
+                  {pcAuthExpanded ? (
+                    <>
+                      <span>Réduire</span>
+                      <ChevronUp className="h-3.5 w-3.5" />
+                    </>
+                  ) : (
+                    <>
+                      <span>Se connecter</span>
+                      <ChevronDown className="h-3.5 w-3.5" />
+                    </>
+                  )}
+                </button>
+              </div>
+              <CardDescription
+                className={`text-xs font-medium text-slate-700 ${
+                  pcAuthExpanded ? 'block' : 'block md:hidden'
                 }`}
               >
-                <Lock className="h-3.5 w-3.5" />
-                <span>Se connecter</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => switchMode('FIRST_ACCESS')}
-                className={`flex items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-bold transition ${
-                  mode === 'FIRST_ACCESS'
-                    ? 'bg-sky-700 text-white shadow-sm'
-                    : 'text-slate-800 hover:bg-white/70 hover:text-slate-950'
+                {mode === 'SIGN_IN' &&
+                  'Réservé aux membres pré-enregistrés par l’administrateur LIFRAS.'}
+                {mode === 'FIRST_ACCESS' &&
+                  'Saisissez votre adresse e-mail pré-enregistrée et choisissez votre mot de passe (sans e-mail de confirmation).'}
+                {mode === 'FORGOT_PASSWORD' &&
+                  'Réinitialisation sécurisée sans envoi d’e-mail.'}
+              </CardDescription>
+
+              {/* Onglets rapides Se connecter / 1ère connexion */}
+              <div
+                className={`grid grid-cols-2 gap-1 rounded-lg bg-slate-200/80 p-1 ${
+                  pcAuthExpanded ? 'grid' : 'grid md:hidden'
                 }`}
               >
-                <KeyRound className="h-3.5 w-3.5" />
-                <span>1ère connexion</span>
-              </button>
-            </div>
-          </CardHeader>
+                <button
+                  type="button"
+                  onClick={() => switchMode('SIGN_IN')}
+                  className={`flex items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-bold transition ${
+                    mode === 'SIGN_IN'
+                      ? 'bg-sky-700 text-white shadow-sm'
+                      : 'text-slate-800 hover:bg-white/70 hover:text-slate-950'
+                  }`}
+                >
+                  <Lock className="h-3.5 w-3.5" />
+                  <span>Se connecter</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => switchMode('FIRST_ACCESS')}
+                  className={`flex items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-bold transition ${
+                    mode === 'FIRST_ACCESS'
+                      ? 'bg-sky-700 text-white shadow-sm'
+                      : 'text-slate-800 hover:bg-white/70 hover:text-slate-950'
+                  }`}
+                >
+                  <KeyRound className="h-3.5 w-3.5" />
+                  <span>1ère connexion</span>
+                </button>
+              </div>
+            </CardHeader>
 
-          <CardContent className="space-y-3 p-3.5 sm:p-4 pt-2">
+          <CardContent
+            className={`space-y-3 p-3.5 sm:p-4 pt-2 ${
+              pcAuthExpanded ? 'block' : 'block md:hidden'
+            }`}
+          >
             {infoMessage && (
               <div className="flex items-start gap-2 rounded-md border border-emerald-300 bg-emerald-50 p-2.5 text-xs text-emerald-900">
                 <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
@@ -504,20 +548,47 @@ export function LoginPage(): React.ReactElement {
           </CardContent>
         </Card>
 
-        {/* Carte 2 : Accès rapide par Rôle Réglementaire empilée juste en dessous */}
+        {/* Carte 2 : Accès rapide par Rôle Réglementaire — réduite par défaut sur PC (md+), ouverte en 1 clic */}
         <Card className="border-sky-400/30 bg-slate-950/75 text-slate-100 backdrop-blur-md shadow-2xl">
-          <CardHeader className="space-y-0.5 p-3 pb-1.5">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-bold text-white">
-                Accès rapide par Rôle Réglementaire
-              </CardTitle>
-              <Badge variant="secondary" className="bg-sky-500/20 text-sky-300 text-[10px]">
-                <ShieldCheck className="mr-1 h-3 w-3 text-sky-400" />
+          <CardHeader className="space-y-0.5 p-3 pb-2">
+            <div className="flex items-center justify-between gap-2">
+              <button
+                type="button"
+                onClick={() => setPcQuickAccessExpanded((prev) => !prev)}
+                className="flex flex-1 items-center gap-2 text-left md:cursor-pointer cursor-default"
+              >
+                <ShieldCheck className="h-4 w-4 shrink-0 text-sky-400" />
+                <CardTitle className="text-sm font-bold text-white">
+                  Accès rapide par Rôle Réglementaire
+                </CardTitle>
+              </button>
+              <Badge variant="secondary" className="md:hidden bg-sky-500/20 text-sky-300 text-[10px]">
                 RBAC & RLS
               </Badge>
+              <button
+                type="button"
+                onClick={() => setPcQuickAccessExpanded((prev) => !prev)}
+                className="hidden md:inline-flex items-center gap-1 rounded-md border border-sky-400/40 bg-sky-500/20 px-2.5 py-1 text-xs font-bold text-sky-200 transition hover:bg-sky-500/35"
+              >
+                {pcQuickAccessExpanded ? (
+                  <>
+                    <span>Réduire</span>
+                    <ChevronUp className="h-3.5 w-3.5" />
+                  </>
+                ) : (
+                  <>
+                    <span>Ouvrir</span>
+                    <ChevronDown className="h-3.5 w-3.5" />
+                  </>
+                )}
+              </button>
             </div>
           </CardHeader>
-          <CardContent className="space-y-1.5 p-3 pt-1">
+          <CardContent
+            className={`space-y-1.5 p-3 pt-1 ${
+              pcQuickAccessExpanded ? 'block' : 'block md:hidden'
+            }`}
+          >
             {ROLES_LIST.map((role) => (
               <button
                 key={role}
