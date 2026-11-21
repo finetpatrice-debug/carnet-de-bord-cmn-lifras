@@ -1,18 +1,14 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { isSupabaseConfigured, supabase } from '@/services/supabaseClient';
+import {
+  findAuthorizedProfileByEmail,
+  loadSavedAuthorizedSession,
+  saveAuthorizedSession,
+  setAuthorizedPassword,
+  verifyAuthorizedPassword,
+} from '@/services/authorizedAccessService';
 import type { Profile, UserRole } from '@/domain/types';
-
-interface SignUpPayload {
-  email: string;
-  password: string;
-  first_name: string;
-  last_name: string;
-  role: UserRole;
-  febras_number: string;
-  phone_gsm: string;
-  club_name: string;
-}
 
 interface AuthContextValue {
   session: Session | null;
@@ -22,68 +18,18 @@ interface AuthContextValue {
   error: string | null;
   isDemoMode: boolean;
   signInWithPassword: (email: string, password: string) => Promise<{ error: string | null }>;
-  signUpNewUser: (payload: SignUpPayload) => Promise<{
+  activateAuthorizedAccess: (
+    email: string,
+    password: string
+  ) => Promise<{
     error: string | null;
-    createdProfile: Profile | null;
-    requiresEmailConfirmation: boolean;
+    activatedProfile: Profile | null;
   }>;
-  requestPasswordReset: (email: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   switchDemoRole: (role: UserRole) => void;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
-
-const SELF_REGISTERED_USERS_KEY = 'cmn_lifras_self_registered_users_v1';
-
-interface StoredRegisteredUser {
-  profile: Profile;
-  password: string;
-}
-
-function loadRegisteredUsers(): StoredRegisteredUser[] {
-  try {
-    const raw = localStorage.getItem(SELF_REGISTERED_USERS_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as StoredRegisteredUser[];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveRegisteredUser(entry: StoredRegisteredUser): void {
-  try {
-    const current = loadRegisteredUsers().filter(
-      (u) => u.profile.email.toLowerCase() !== entry.profile.email.toLowerCase()
-    );
-    localStorage.setItem(
-      SELF_REGISTERED_USERS_KEY,
-      JSON.stringify([entry, ...current])
-    );
-  } catch {
-    // Ignore storage quota errors
-  }
-}
-
-function findProfileByEmailInLocalStores(email: string): Profile | null {
-  const emailLower = email.trim().toLowerCase();
-  try {
-    for (const key of [
-      'cmn_lifras_candidates_v1',
-      'cmn_lifras_mn_directory_v1',
-    ]) {
-      const raw = localStorage.getItem(key);
-      if (!raw) continue;
-      const list = JSON.parse(raw) as Profile[];
-      const match = list.find((p) => p.email.toLowerCase() === emailLower);
-      if (match) return match;
-    }
-  } catch {
-    // Ignore
-  }
-  return null;
-}
 
 const DEMO_PROFILES: Record<UserRole, Profile> = {
   ADMIN_DTF: {
@@ -262,8 +208,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
           activeSession.user.email,
           activeSession.user.user_metadata
         );
+      } else {
+        // Restaurer la session d'un membre pré-autorisé (connexion sans e-mail)
+        const saved = loadSavedAuthorizedSession();
+        if (saved) {
+          const fresh = await findAuthorizedProfileByEmail(saved.email);
+          if (fresh && mounted) {
+            setProfile(fresh);
+            saveAuthorizedSession(fresh);
+            setIsDemoMode(false);
+          } else if (mounted) {
+            saveAuthorizedSession(null);
+          }
+        }
       }
-      setLoading(false);
+      if (mounted) setLoading(false);
     });
 
     const {
@@ -295,198 +254,117 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
     password: string
   ): Promise<{ error: string | null }> => {
     setError(null);
-    if (!isSupabaseConfigured) {
-      return {
-        error:
-          'Variables VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY non définies. Utilisez le sélecteur de rôle de démonstration ou configurez votre fichier .env.',
-      };
-    }
+    const trimmedEmail = email.trim();
 
-    const { data: signInData, error: signInError } =
-      await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-    if (signInError) {
-      const errMsgLower = signInError.message.toLowerCase();
-
-      // Si Supabase renvoie "Email not confirmed", on autorise immédiatement la connexion
-      // avec le profil créé lors de l'inscription (ou un profil LIFRAS par défaut)
-      // afin que les nouveaux inscrits puissent accéder à l'application sans blocage.
-      if (errMsgLower.includes('email not confirmed')) {
-        const regMatch = loadRegisteredUsers().find(
-          (u) => u.profile.email.toLowerCase() === email.trim().toLowerCase()
-        );
-        const storeMatch = findProfileByEmailInLocalStores(email);
-        const resolvedProfile: Profile = regMatch?.profile ??
-          storeMatch ?? {
-            ...DEMO_PROFILES.MN_EVALUATOR,
-            id: `user-${Date.now()}`,
-            email: email.trim(),
-            first_name: email.split('@')[0] || 'Membre',
-            last_name: 'LIFRAS',
-          };
-
-        setProfile(resolvedProfile);
-        setIsDemoMode(true);
+    // 1. Vérification prioritaire dans le registre des membres pré-autorisés (zéro e-mail)
+    const authorizedProfile = await findAuthorizedProfileByEmail(trimmedEmail);
+    if (authorizedProfile) {
+      const check = await verifyAuthorizedPassword(trimmedEmail, password);
+      if (check === 'OK') {
+        setProfile(authorizedProfile);
+        saveAuthorizedSession(authorizedProfile);
+        setIsDemoMode(false);
         setError(null);
         return { error: null };
       }
-
-      const frenchMsg = errMsgLower.includes('invalid login credentials')
-        ? 'Identifiants incorrects : vérifiez votre adresse e-mail et votre mot de passe (ou cliquez sur « S’inscrire » si vous n’avez pas encore créé votre compte).'
-        : signInError.message;
-
-      setError(frenchMsg);
-      return { error: frenchMsg };
+      if (check === 'WRONG_PASSWORD') {
+        const msg =
+          'Mot de passe incorrect. En cas d’oubli, demandez à un administrateur LIFRAS de réinitialiser votre mot de passe.';
+        setError(msg);
+        return { error: msg };
+      }
+      // check === 'NO_PASSWORD_SET' : on teste silencieusement Supabase Auth au cas où un ancien compte existe déjà (n'envoie jamais d'e-mail)
+      if (isSupabaseConfigured) {
+        const { data: sbData, error: sbErr } =
+          await supabase.auth.signInWithPassword({
+            email: trimmedEmail,
+            password,
+          });
+        if (!sbErr && sbData.user) {
+          await fetchProfile(
+            sbData.user.id,
+            sbData.user.email,
+            sbData.user.user_metadata
+          );
+          setIsDemoMode(false);
+          return { error: null };
+        }
+      }
+      const noPwdMsg =
+        'Votre adresse e-mail est bien autorisée, mais votre mot de passe n’a pas encore été défini. Cliquez sur « 1ère connexion (Activer mon accès) » pour choisir votre mot de passe.';
+      setError(noPwdMsg);
+      return { error: noPwdMsg };
     }
 
-    if (signInData.user) {
-      await fetchProfile(
-        signInData.user.id,
-        signInData.user.email,
-        signInData.user.user_metadata
-      );
+    // 2. Comptes administrateurs/concepteur déjà existants dans Supabase Auth (ex. patricefinet@lifras.be) — n'envoie jamais d'e-mail
+    if (isSupabaseConfigured) {
+      const { data: signInData, error: signInError } =
+        await supabase.auth.signInWithPassword({
+          email: trimmedEmail,
+          password,
+        });
+
+      if (!signInError && signInData.user) {
+        await fetchProfile(
+          signInData.user.id,
+          signInData.user.email,
+          signInData.user.user_metadata
+        );
+        setIsDemoMode(false);
+        return { error: null };
+      }
     }
 
-    setIsDemoMode(false);
-    return { error: null };
+    // 3. Adresse inconnue / non pré-enregistrée : accès refusé
+    const deniedMsg =
+      'Accès refusé : cette adresse e-mail n’est pas pré-enregistrée dans la liste des membres autorisés (ou mot de passe incorrect). Contactez un administrateur LIFRAS.';
+    setError(deniedMsg);
+    return { error: deniedMsg };
   };
 
-  const signUpNewUser = async (
-    payload: SignUpPayload
+  const activateAuthorizedAccess = async (
+    email: string,
+    password: string
   ): Promise<{
     error: string | null;
-    createdProfile: Profile | null;
-    requiresEmailConfirmation: boolean;
+    activatedProfile: Profile | null;
   }> => {
     setError(null);
-    const nowIso = new Date().toISOString();
+    const trimmedEmail = email.trim();
 
-    const buildNewProfile = (id: string): Profile => ({
-      id,
-      role: payload.role,
-      cohort_id: 'cohort-2026',
-      sponsor_mn_id: null,
-      last_name: payload.last_name.trim(),
-      first_name: payload.first_name.trim(),
-      birth_date: null,
-      street_address: null,
-      postal_code: null,
-      city: null,
-      phone_landline: null,
-      phone_gsm: payload.phone_gsm.trim() || null,
-      email: payload.email.trim(),
-      febras_number: payload.febras_number.trim() || null,
-      cfps_year: null,
-      mf_year: null,
-      dives_count: 0,
-      club_name: payload.club_name.trim() || null,
-      club_president: null,
-      club_head_instructor: null,
-      club_head_gsm: null,
-      photo_storage_path: null,
-      aliases: [`${payload.last_name.trim()} ${payload.first_name.trim()}`],
-      created_at: nowIso,
-      updated_at: nowIso,
-    });
-
-    if (!isSupabaseConfigured) {
-      const localProfile = buildNewProfile(`user-${Date.now()}`);
-      setIsDemoMode(true);
-      setProfile(localProfile);
-      return {
-        error: null,
-        createdProfile: localProfile,
-        requiresEmailConfirmation: false,
-      };
+    // 1. Vérifier que l'adresse e-mail est bien pré-enregistrée par un administrateur
+    const authorizedProfile = await findAuthorizedProfileByEmail(trimmedEmail);
+    if (!authorizedProfile) {
+      const msg =
+        'Accès refusé : cette adresse e-mail n’est pas pré-enregistrée dans la liste des membres autorisés. Seul un administrateur LIFRAS peut ajouter votre adresse.';
+      setError(msg);
+      return { error: msg, activatedProfile: null };
     }
 
-    const { data, error: signUpErr } = await supabase.auth.signUp({
-      email: payload.email.trim(),
-      password: payload.password,
-      options: {
-        data: {
-          first_name: payload.first_name.trim(),
-          last_name: payload.last_name.trim(),
-          role: payload.role,
-          febras_number: payload.febras_number.trim(),
-          phone_gsm: payload.phone_gsm.trim(),
-          club_name: payload.club_name.trim(),
-        },
-      },
-    });
-
-    if (signUpErr) {
-      setError(signUpErr.message);
-      return {
-        error: signUpErr.message,
-        createdProfile: null,
-        requiresEmailConfirmation: false,
-      };
+    // 2. Empêcher l'écrasement d'un mot de passe déjà défini par le titulaire
+    const existingStatus = await verifyAuthorizedPassword(trimmedEmail, password);
+    if (existingStatus !== 'NO_PASSWORD_SET') {
+      const msg =
+        'Cet accès dispose déjà d’un mot de passe. Utilisez l’onglet « Se connecter » ou demandez à un administrateur de réinitialiser votre mot de passe.';
+      setError(msg);
+      return { error: msg, activatedProfile: null };
     }
 
-    const userId = data.user?.id ?? `user-${Date.now()}`;
-    const createdProfile = buildNewProfile(userId);
-
-    // Sauvegarde locale immédiate pour permettre la connexion directe même si la confirmation e-mail Supabase est active
-    saveRegisteredUser({
-      profile: createdProfile,
-      password: payload.password,
-    });
-
-    // Tentative d'enregistrement direct dans public.profiles si la session est ouverte
-    try {
-      await supabase.from('profiles').upsert({
-        id: createdProfile.id,
-        role: createdProfile.role,
-        last_name: createdProfile.last_name,
-        first_name: createdProfile.first_name,
-        email: createdProfile.email,
-        febras_number: createdProfile.febras_number,
-        phone_gsm: createdProfile.phone_gsm,
-        club_name: createdProfile.club_name,
-        aliases: createdProfile.aliases,
-      });
-    } catch {
-      // Ignorer si RLS bloque l'insertion directe avant confirmation e-mail
-    }
-
-    // Connexion immédiate sans bloquer l'utilisateur sur la confirmation d'e-mail
-    setProfile(createdProfile);
-    setIsDemoMode(!data.session);
+    // 3. Enregistrer le mot de passe haché (SHA-256) dans Supabase sans aucun envoi d'e-mail
+    await setAuthorizedPassword(trimmedEmail, authorizedProfile.id, password);
+    setProfile(authorizedProfile);
+    saveAuthorizedSession(authorizedProfile);
+    setIsDemoMode(false);
+    setError(null);
 
     return {
       error: null,
-      createdProfile,
-      requiresEmailConfirmation: false,
+      activatedProfile: authorizedProfile,
     };
   };
 
-  const requestPasswordReset = async (
-    email: string
-  ): Promise<{ error: string | null }> => {
-    setError(null);
-    if (!isSupabaseConfigured) {
-      return { error: null };
-    }
-    const redirectTo =
-      typeof window !== 'undefined'
-        ? `${window.location.origin}/connexion`
-        : 'https://carnet-de-bord-cmn.web.app/connexion';
-    const { error: resetErr } = await supabase.auth.resetPasswordForEmail(
-      email.trim(),
-      { redirectTo }
-    );
-    if (resetErr) {
-      setError(resetErr.message);
-      return { error: resetErr.message };
-    }
-    return { error: null };
-  };
-
   const signOut = async (): Promise<void> => {
+    saveAuthorizedSession(null);
     if (isDemoMode) {
       setProfile(null);
       return;
@@ -498,6 +376,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
   };
 
   const switchDemoRole = (role: UserRole): void => {
+    saveAuthorizedSession(null);
     setIsDemoMode(true);
     setError(null);
     setProfile(DEMO_PROFILES[role]);
@@ -513,8 +392,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
         error,
         isDemoMode,
         signInWithPassword,
-        signUpNewUser,
-        requestPasswordReset,
+        activateAuthorizedAccess,
         signOut,
         switchDemoRole,
       }}

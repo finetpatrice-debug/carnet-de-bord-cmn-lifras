@@ -9,6 +9,10 @@ import {
   type OnlineUserPresence,
 } from '@/services/presenceService';
 import {
+  resetAuthorizedPassword,
+  setAuthorizedPassword,
+} from '@/services/authorizedAccessService';
+import {
   buildCriterionMappingProposals,
   executeExamReclassification,
 } from './reclassificationService';
@@ -40,6 +44,7 @@ import {
   ChevronUp,
   FileWarning,
   History,
+  KeyRound,
   Maximize2,
   Minimize2,
   Monitor,
@@ -98,6 +103,9 @@ export function AdminPage(): React.ReactElement {
   const [newCandCfpsYear, setNewCandCfpsYear] = useState('2020');
   const [newCandMfYear, setNewCandMfYear] = useState('2023');
   const [newCandPhotoDataUrl, setNewCandPhotoDataUrl] = useState<string | null>(null);
+  const [newCandInitialPassword, setNewCandInitialPassword] = useState('');
+  const [editProfileNewPassword, setEditProfileNewPassword] = useState('');
+  const [editProfilePwdStatus, setEditProfilePwdStatus] = useState<string | null>(null);
   const [candidateCreatedMsg, setCandidateCreatedMsg] = useState<string | null>(null);
 
   const handlePhotoFileToDataUrl = (
@@ -196,8 +204,19 @@ export function AdminPage(): React.ReactElement {
     };
 
     createCandidateProfile({ candidateProfile, auditLog });
+    if (newCandInitialPassword.trim().length >= 6) {
+      void setAuthorizedPassword(
+        candidateProfile.email,
+        candidateProfile.id,
+        newCandInitialPassword.trim()
+      );
+    }
     setCandidateCreatedMsg(
-      `Le candidat CMN ${candidateProfile.first_name} ${candidateProfile.last_name} (FEBRAS #${candidateProfile.febras_number ?? 'N/A'}) a été inscrit dans la promotion CMN_2026.`
+      `Le profil ${candidateProfile.first_name} ${candidateProfile.last_name} (${candidateProfile.email}) est autorisé dans le système.${
+        newCandInitialPassword.trim().length >= 6
+          ? ' Mot de passe initial attribué.'
+          : ' Il pourra choisir son mot de passe dès sa 1ère connexion.'
+      }`
     );
     setNewCandLastName('');
     setNewCandFirstName('');
@@ -206,6 +225,7 @@ export function AdminPage(): React.ReactElement {
     setNewCandGsm('');
     setNewCandClub('');
     setNewCandPhotoDataUrl(null);
+    setNewCandInitialPassword('');
     setShowNewCandidateForm(false);
   };
 
@@ -558,6 +578,18 @@ export function AdminPage(): React.ReactElement {
                     className="block w-full text-xs text-slate-600 file:mr-2 file:rounded-md file:border-0 file:bg-sky-600 file:px-2.5 file:py-1.5 file:text-xs file:font-semibold file:text-white hover:file:bg-sky-700"
                   />
                 </div>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-slate-700">
+                  Mot de passe initial (optionnel, min. 6 car.)
+                </label>
+                <Input
+                  type="text"
+                  placeholder="Laisser vide = le membre le choisit"
+                  value={newCandInitialPassword}
+                  onChange={(e) => setNewCandInitialPassword(e.target.value)}
+                  className="mt-1 bg-white"
+                />
               </div>
               <div className="sm:col-span-3 flex justify-end gap-2 pt-2">
                 <Button
@@ -1182,6 +1214,77 @@ export function AdminPage(): React.ReactElement {
                           className="text-xs text-slate-600 file:mr-2 file:rounded-md file:border-0 file:bg-sky-600 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white hover:file:bg-sky-700"
                         />
                       </div>
+                    </div>
+                    <div className="sm:col-span-2 lg:col-span-3 rounded-xl border border-sky-200 bg-sky-50/60 p-3.5 space-y-2.5">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-sky-900">
+                        <KeyRound className="h-4 w-4 text-sky-700" />
+                        <span>Accès & Mot de passe (pré-autorisation sans e-mail)</span>
+                      </div>
+                      <p className="text-[11px] text-slate-600">
+                        L’adresse <strong>{editingProfile.email}</strong> est automatiquement
+                        autorisée. Vous pouvez lui attribuer un mot de passe officiel ou
+                        réinitialiser son accès pour qu’il le définisse à sa prochaine connexion.
+                      </p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Input
+                          type="text"
+                          placeholder="Nouveau mot de passe (min. 6 car.)"
+                          value={editProfileNewPassword}
+                          onChange={(e) => setEditProfileNewPassword(e.target.value)}
+                          className="h-8 max-w-xs bg-white text-xs"
+                        />
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={async () => {
+                            if (editProfileNewPassword.trim().length < 6) {
+                              setEditProfilePwdStatus(
+                                'Le mot de passe doit comporter au moins 6 caractères.'
+                              );
+                              return;
+                            }
+                            await setAuthorizedPassword(
+                              editingProfile.email,
+                              editingProfile.id,
+                              editProfileNewPassword.trim()
+                            );
+                            setEditProfileNewPassword('');
+                            setEditProfilePwdStatus(
+                              `Nouveau mot de passe enregistré pour ${editingProfile.email}.`
+                            );
+                          }}
+                          className="h-8 border-sky-300 bg-white text-xs text-sky-800 hover:bg-sky-100"
+                        >
+                          Attribuer ce mot de passe
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={async () => {
+                            if (
+                              window.confirm(
+                                `Réinitialiser le mot de passe de ${editingProfile.first_name} ${editingProfile.last_name} ? Il pourra en définir un nouveau via « 1ère connexion ».`
+                              )
+                            ) {
+                              await resetAuthorizedPassword(editingProfile.email);
+                              setEditProfileNewPassword('');
+                              setEditProfilePwdStatus(
+                                `Accès réinitialisé : ${editingProfile.email} peut choisir un nouveau mot de passe via « 1ère connexion ».`
+                              );
+                            }
+                          }}
+                          className="h-8 border-amber-300 bg-white text-xs text-amber-800 hover:bg-amber-50"
+                        >
+                          Réinitialiser (1ère connexion)
+                        </Button>
+                      </div>
+                      {editProfilePwdStatus && (
+                        <div className="text-xs font-semibold text-emerald-700">
+                          {editProfilePwdStatus}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

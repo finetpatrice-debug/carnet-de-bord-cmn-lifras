@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
-import { useAdminStore } from '@/features/admin/AdminStoreContext';
-import type { AuditLog, UserRole } from '@/domain/types';
+import type { UserRole } from '@/domain/types';
 import { USER_ROLE_LABELS } from '@/domain/types';
 import { APP_VERSION } from '@/domain/referentials';
 import { Button } from '@/components/ui/button';
@@ -21,7 +20,6 @@ import {
   UserCheck,
   Eye,
   EyeOff,
-  UserPlus,
   KeyRound,
   ArrowLeft,
   CheckCircle2,
@@ -33,34 +31,24 @@ const ROLES_LIST: UserRole[] = [
   'CMN_CANDIDATE',
 ];
 
-type AuthViewMode = 'SIGN_IN' | 'SIGN_UP' | 'FORGOT_PASSWORD';
+type AuthViewMode = 'SIGN_IN' | 'FIRST_ACCESS' | 'FORGOT_PASSWORD';
 
 export function LoginPage(): React.ReactElement {
   const {
     signInWithPassword,
-    signUpNewUser,
-    requestPasswordReset,
+    activateAuthorizedAccess,
     switchDemoRole,
     error,
   } = useAuth();
-  const { createCandidateProfile } = useAdminStore();
   const navigate = useNavigate();
 
   const [mode, setMode] = useState<AuthViewMode>('SIGN_IN');
 
-  // Champs Connexion & Réinitialisation
+  // Champs Connexion & Activation 1ère connexion
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-
-  // Champs Inscription d'un nouvel utilisateur
-  const [regFirstName, setRegFirstName] = useState('');
-  const [regLastName, setRegLastName] = useState('');
-  const [regRole, setRegRole] = useState<UserRole>('CMN_CANDIDATE');
-  const [regFebras, setRegFebras] = useState('');
-  const [regGsm, setRegGsm] = useState('');
-  const [regClub, setRegClub] = useState('');
-  const [regPasswordConfirm, setRegPasswordConfirm] = useState('');
+  const [passwordConfirm, setPasswordConfirm] = useState('');
   const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
 
   const [submitting, setSubmitting] = useState(false);
@@ -85,7 +73,9 @@ export function LoginPage(): React.ReactElement {
     }
   };
 
-  const handleSignUpSubmit = async (e: React.FormEvent): Promise<void> => {
+  const handleFirstAccessSubmit = async (
+    e: React.FormEvent
+  ): Promise<void> => {
     e.preventDefault();
     setLocalError(null);
     setInfoMessage(null);
@@ -94,22 +84,13 @@ export function LoginPage(): React.ReactElement {
       setLocalError('Le mot de passe doit comporter au moins 6 caractères.');
       return;
     }
-    if (password !== regPasswordConfirm) {
+    if (password !== passwordConfirm) {
       setLocalError('Les deux mots de passe saisis ne correspondent pas.');
       return;
     }
 
     setSubmitting(true);
-    const res = await signUpNewUser({
-      email,
-      password,
-      first_name: regFirstName,
-      last_name: regLastName,
-      role: regRole,
-      febras_number: regFebras,
-      phone_gsm: regGsm,
-      club_name: regClub,
-    });
+    const res = await activateAuthorizedAccess(email, password);
     setSubmitting(false);
 
     if (res.error) {
@@ -117,64 +98,7 @@ export function LoginPage(): React.ReactElement {
       return;
     }
 
-    if (res.createdProfile) {
-      const nowIso = new Date().toISOString();
-      const auditLog: AuditLog = {
-        id: `audit-signup-${Date.now()}`,
-        actor_id: res.createdProfile.id,
-        entity_type: 'profiles',
-        entity_id: res.createdProfile.id,
-        action: 'SELF_SIGNUP_PROFILE',
-        previous_value: null,
-        new_value: {
-          name: `${res.createdProfile.first_name} ${res.createdProfile.last_name}`,
-          role: res.createdProfile.role,
-          email: res.createdProfile.email,
-          febras_number: res.createdProfile.febras_number,
-          club_name: res.createdProfile.club_name,
-        },
-        reason: `Inscription directe depuis la page d'accueil (${USER_ROLE_LABELS[res.createdProfile.role]})`,
-        created_at: nowIso,
-      };
-      createCandidateProfile({
-        candidateProfile: res.createdProfile,
-        auditLog,
-      });
-    }
-
-    if (res.requiresEmailConfirmation) {
-      setInfoMessage(
-        `Votre compte (${regFirstName} ${regLastName}) a bien été créé ! Vérifiez votre boîte e-mail (${email}) pour valider le lien d’activation, puis connectez-vous.`
-      );
-      setMode('SIGN_IN');
-    } else {
-      navigate('/tableau-de-bord');
-    }
-  };
-
-  const handleForgotPasswordSubmit = async (
-    e: React.FormEvent
-  ): Promise<void> => {
-    e.preventDefault();
-    setLocalError(null);
-    setInfoMessage(null);
-
-    if (!email.trim()) {
-      setLocalError(
-        'Veuillez saisir votre adresse e-mail officielle pour recevoir le lien de réinitialisation.'
-      );
-      return;
-    }
-
-    setSubmitting(true);
-    const res = await requestPasswordReset(email);
-    setSubmitting(false);
-
-    if (!res.error) {
-      setInfoMessage(
-        `Un e-mail de réinitialisation du mot de passe a été envoyé à l’adresse ${email}. Vérifiez votre boîte de réception (et vos courriers indésirables).`
-      );
-    }
+    navigate('/tableau-de-bord');
   };
 
   const handleDemoLogin = (role: UserRole): void => {
@@ -264,18 +188,18 @@ export function LoginPage(): React.ReactElement {
           <Card className="border-slate-200 bg-white shadow-2xl">
             <CardHeader className="space-y-1 p-3.5 pb-1.5">
               <CardTitle className="text-base font-extrabold text-slate-950">
-                Connexion & Inscription
+                Accès Sécurisé LIFRAS
               </CardTitle>
               <CardDescription className="text-xs font-medium text-slate-700">
               {mode === 'SIGN_IN' &&
-                'Portail officiel sécurisé de suivi du cursus Candidat Moniteur National.'}
-              {mode === 'SIGN_UP' &&
-                'Création d’un nouveau compte dans le système (Candidat CMN ou Moniteur National).'}
+                'Réservé aux membres pré-enregistrés par l’administrateur LIFRAS.'}
+              {mode === 'FIRST_ACCESS' &&
+                'Saisissez votre adresse e-mail pré-enregistrée et choisissez votre mot de passe (sans e-mail de confirmation).'}
               {mode === 'FORGOT_PASSWORD' &&
-                'Réinitialisation sécurisée de votre mot de passe par e-mail.'}
+                'Réinitialisation sécurisée sans envoi d’e-mail.'}
             </CardDescription>
 
-            {/* Onglets rapides Se connecter / S'inscrire */}
+            {/* Onglets rapides Se connecter / 1ère connexion */}
             <div className="grid grid-cols-2 gap-1 rounded-lg bg-slate-200/80 p-1">
               <button
                 type="button"
@@ -291,15 +215,15 @@ export function LoginPage(): React.ReactElement {
               </button>
               <button
                 type="button"
-                onClick={() => switchMode('SIGN_UP')}
+                onClick={() => switchMode('FIRST_ACCESS')}
                 className={`flex items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-bold transition ${
-                  mode === 'SIGN_UP'
+                  mode === 'FIRST_ACCESS'
                     ? 'bg-sky-700 text-white shadow-sm'
                     : 'text-slate-800 hover:bg-white/70 hover:text-slate-950'
                 }`}
               >
-                <UserPlus className="h-3.5 w-3.5" />
-                <span>S’inscrire (Nouveau)</span>
+                <KeyRound className="h-3.5 w-3.5" />
+                <span>1ère connexion</span>
               </button>
             </div>
           </CardHeader>
@@ -395,154 +319,59 @@ export function LoginPage(): React.ReactElement {
                 </Button>
 
                 <div className="pt-1 text-center text-xs text-slate-600">
-                  Pas encore inscrit dans le système ?{' '}
+                  Première visite avec votre e-mail pré-enregistré ?{' '}
                   <button
                     type="button"
-                    onClick={() => switchMode('SIGN_UP')}
+                    onClick={() => switchMode('FIRST_ACCESS')}
                     className="font-bold text-sky-700 hover:underline"
                   >
-                    Créer mon compte
+                    Activer mon accès
                   </button>
                 </div>
               </form>
             )}
 
-            {/* 2. MODE INSCRIPTION (NOUVEL UTILISATEUR) */}
-            {mode === 'SIGN_UP' && (
-              <form onSubmit={(e) => void handleSignUpSubmit(e)} className="space-y-3">
-                <div>
-                  <label
-                    htmlFor="reg-role"
-                    className="text-xs font-semibold text-slate-700"
-                  >
-                    Profil souhaité *
-                  </label>
-                  <select
-                    id="reg-role"
-                    value={regRole}
-                    onChange={(e) => setRegRole(e.target.value as UserRole)}
-                    className="mt-1 flex h-9 w-full rounded-md border border-slate-300 bg-white px-3 text-xs font-bold text-slate-900"
-                  >
-                    <option value="CMN_CANDIDATE">
-                      {USER_ROLE_LABELS.CMN_CANDIDATE}
-                    </option>
-                    <option value="MN_EVALUATOR">
-                      {USER_ROLE_LABELS.MN_EVALUATOR}
-                    </option>
-                  </select>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2.5">
-                  <div>
-                    <label
-                      htmlFor="reg-firstname"
-                      className="text-xs font-semibold text-slate-700"
-                    >
-                      Prénom *
-                    </label>
-                    <Input
-                      id="reg-firstname"
-                      placeholder="Ex: Sophie"
-                      value={regFirstName}
-                      onChange={(e) => setRegFirstName(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label
-                      htmlFor="reg-lastname"
-                      className="text-xs font-semibold text-slate-700"
-                    >
-                      Nom *
-                    </label>
-                    <Input
-                      id="reg-lastname"
-                      placeholder="Ex: Lejeune"
-                      value={regLastName}
-                      onChange={(e) => setRegLastName(e.target.value)}
-                      required
-                    />
-                  </div>
+            {/* 2. MODE 1ÈRE CONNEXION (MEMBRE PRÉ-ENREGISTRÉ UNIQUEMENT, SANS E-MAIL) */}
+            {mode === 'FIRST_ACCESS' && (
+              <form
+                onSubmit={(e) => void handleFirstAccessSubmit(e)}
+                className="space-y-3"
+              >
+                <div className="rounded-md border border-sky-200 bg-sky-50 p-2.5 text-[11px] text-sky-900">
+                  Seules les adresses e-mail préalablement enregistrées par
+                  l’administrateur LIFRAS peuvent activer un accès. Aucun e-mail
+                  de confirmation n’est envoyé.
                 </div>
 
                 <div>
                   <label
-                    htmlFor="reg-email"
+                    htmlFor="first-email"
                     className="text-xs font-semibold text-slate-700"
                   >
-                    Adresse e-mail *
+                    Votre adresse e-mail pré-enregistrée *
                   </label>
                   <Input
-                    id="reg-email"
+                    id="first-email"
                     type="email"
                     placeholder="prenom.nom@lifras.be"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    className="mt-1 border-slate-400 bg-white font-semibold text-slate-950"
                     required
                   />
-                </div>
-
-                <div className="grid grid-cols-3 gap-2">
-                  <div>
-                    <label
-                      htmlFor="reg-febras"
-                      className="text-xs font-semibold text-slate-700"
-                    >
-                      N° FEBRAS *
-                    </label>
-                    <Input
-                      id="reg-febras"
-                      placeholder="0054321"
-                      value={regFebras}
-                      onChange={(e) => setRegFebras(e.target.value)}
-                      className="font-mono"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label
-                      htmlFor="reg-gsm"
-                      className="text-xs font-semibold text-slate-700"
-                    >
-                      GSM *
-                    </label>
-                    <Input
-                      id="reg-gsm"
-                      placeholder="0475123456"
-                      value={regGsm}
-                      onChange={(e) => setRegGsm(e.target.value)}
-                      className="font-mono"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label
-                      htmlFor="reg-club"
-                      className="text-xs font-semibold text-slate-700"
-                    >
-                      Club LIFRAS *
-                    </label>
-                    <Input
-                      id="reg-club"
-                      placeholder="CAS Liège"
-                      value={regClub}
-                      onChange={(e) => setRegClub(e.target.value)}
-                      required
-                    />
-                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                   <div>
                     <label
-                      htmlFor="reg-password"
+                      htmlFor="first-password"
                       className="text-xs font-semibold text-slate-700"
                     >
-                      Mot de passe *
+                      Choisir un mot de passe *
                     </label>
                     <div className="relative mt-1">
                       <Input
-                        id="reg-password"
+                        id="first-password"
                         type={showPassword ? 'text' : 'password'}
                         placeholder="Min. 6 caractères"
                         value={password}
@@ -572,18 +401,18 @@ export function LoginPage(): React.ReactElement {
 
                   <div>
                     <label
-                      htmlFor="reg-password-confirm"
+                      htmlFor="first-password-confirm"
                       className="text-xs font-semibold text-slate-700"
                     >
                       Confirmer *
                     </label>
                     <div className="relative mt-1">
                       <Input
-                        id="reg-password-confirm"
+                        id="first-password-confirm"
                         type={showPasswordConfirm ? 'text' : 'password'}
                         placeholder="Répéter le mot de passe"
-                        value={regPasswordConfirm}
-                        onChange={(e) => setRegPasswordConfirm(e.target.value)}
+                        value={passwordConfirm}
+                        onChange={(e) => setPasswordConfirm(e.target.value)}
                         className="pr-9"
                         required
                       />
@@ -613,53 +442,44 @@ export function LoginPage(): React.ReactElement {
                   className="w-full bg-emerald-600 text-white hover:bg-emerald-700"
                   disabled={submitting}
                 >
-                  <UserPlus className="h-4 w-4" />
+                  <KeyRound className="h-4 w-4" />
                   {submitting
-                    ? 'Création du compte...'
-                    : 'S’inscrire et créer mon profil'}
+                    ? 'Activation en cours...'
+                    : 'Définir mon mot de passe et entrer'}
                 </Button>
               </form>
             )}
 
-            {/* 3. MODE MOT DE PASSE OUBLIE */}
+            {/* 3. MODE MOT DE PASSE OUBLIE (ZERO E-MAIL — REINITIALISATION PAR ADMINISTRATEUR) */}
             {mode === 'FORGOT_PASSWORD' && (
-              <form
-                onSubmit={(e) => void handleForgotPasswordSubmit(e)}
-                className="space-y-4"
-              >
-                <div className="space-y-1.5">
-                  <label
-                    htmlFor="reset-email"
-                    className="text-sm font-medium text-slate-700"
-                  >
-                    Votre adresse e-mail officielle
-                  </label>
-                  <Input
-                    id="reset-email"
-                    type="email"
-                    placeholder="prenom.nom@lifras.be"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
+              <div className="space-y-3">
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-950 space-y-1.5">
+                  <div className="font-bold text-amber-900">
+                    Réinitialisation gérée par un Administrateur LIFRAS
+                  </div>
+                  <p>
+                    Par sécurité et sans envoi d’e-mail automatique, demandez à
+                    un <strong>Administrateur</strong> de réinitialiser votre
+                    accès (ou de vous attribuer un nouveau mot de passe) depuis
+                    votre fiche profil.
+                  </p>
+                  <p>
+                    Dès la réinitialisation effectuée, vous pourrez choisir un
+                    nouveau mot de passe directement via l’onglet{' '}
+                    <strong>« 1ère connexion »</strong>.
+                  </p>
                 </div>
 
-                <Button type="submit" className="w-full" disabled={submitting}>
-                  <KeyRound className="h-4 w-4" />
-                  {submitting
-                    ? 'Envoi en cours...'
-                    : 'Envoyer le lien de réinitialisation'}
-                </Button>
-
-                <button
+                <Button
                   type="button"
+                  variant="outline"
                   onClick={() => switchMode('SIGN_IN')}
-                  className="flex w-full items-center justify-center gap-1.5 pt-1 text-xs font-semibold text-slate-600 hover:text-slate-900"
+                  className="w-full"
                 >
-                  <ArrowLeft className="h-3.5 w-3.5" />
-                  <span>Retour à la connexion</span>
-                </button>
-              </form>
+                  <ArrowLeft className="h-4 w-4" />
+                  Retour à la connexion
+                </Button>
+              </div>
             )}
           </CardContent>
         </Card>
