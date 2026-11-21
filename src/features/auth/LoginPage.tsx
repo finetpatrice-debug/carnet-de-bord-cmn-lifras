@@ -152,31 +152,31 @@ export function LoginPage(): React.ReactElement {
         className="pointer-events-none fixed inset-0 md:hidden bg-gradient-to-br from-slate-950 via-slate-900 to-sky-950"
       />
 
-      {/* En-tête agrandi, remonté tout en haut sur PC (md+) et aligné verticalement pile au-dessus du bloc Connexion & Inscription */}
-      <div className="relative z-10 hidden md:flex md:ml-[6%] lg:ml-[9%] xl:ml-[11%] w-full max-w-md lg:max-w-[440px] items-center gap-3.5 pt-1">
+      {/* En-tête agrandi en haut à gauche sur PC (md+) */}
+      <div className="relative z-10 hidden md:flex md:ml-[6%] lg:ml-[9%] xl:ml-[11%] w-fit items-center gap-4 pt-1">
         <img
           src="/logo-lifras.jpg"
           alt="Logo Officiel LIFRAS"
-          className="h-16 w-16 shrink-0 rounded-full border-2 border-sky-400 bg-white object-cover shadow-xl"
+          className="h-24 w-24 shrink-0 rounded-full border-2 border-sky-400 bg-white object-cover shadow-2xl"
         />
-        <div className="min-w-0">
-          <div className="whitespace-nowrap text-xs font-extrabold uppercase tracking-wider text-sky-300 drop-shadow">
-            Commission de l’Enseignement — LIFRAS
+        <div className="min-w-0 space-y-0.5">
+          <div className="whitespace-nowrap text-sm lg:text-[15px] font-extrabold uppercase tracking-wider text-sky-300 drop-shadow">
+            Commission de l’Enseignement — Pôle Formations &amp; Évaluations
           </div>
-          <div className="flex items-center gap-2.5">
-            <h1 className="whitespace-nowrap text-xl lg:text-2xl font-extrabold leading-tight tracking-tight text-white drop-shadow-md">
+          <div className="flex items-center gap-3">
+            <h1 className="whitespace-nowrap text-2xl lg:text-[32px] font-extrabold leading-tight tracking-tight text-white drop-shadow-md">
               Carnet de Bord Digital CMN
             </h1>
-            <Badge className="shrink-0 border border-emerald-400/60 bg-slate-950/75 font-mono text-xs text-emerald-200 backdrop-blur-md">
+            <Badge className="shrink-0 border border-emerald-400/60 bg-slate-950/75 px-2.5 py-0.5 font-mono text-xs lg:text-sm text-emerald-200 backdrop-blur-md">
               {APP_VERSION}
             </Badge>
           </div>
         </div>
       </div>
 
-      {/* Conteneur principal : centré sur GSM ; sur PC abaissé en bas à gauche au repos pour dégager le paysage, et recentré verticalement dès qu'un panneau est ouvert */}
+      {/* Conteneur principal : centré sur GSM ; sur PC abaissé et décalé vers la droite jusqu'à la ligne de repère, recentré dès qu'un panneau est ouvert */}
       <div
-        className={`relative z-10 mx-auto md:mx-0 md:ml-[6%] lg:ml-[9%] xl:ml-[11%] w-full max-w-md lg:max-w-[440px] space-y-2.5 md:space-y-3 py-2 transition-all duration-300 ${
+        className={`relative z-10 mx-auto md:mx-0 md:ml-[10%] lg:ml-[13%] xl:ml-[15%] w-full max-w-md lg:max-w-[440px] space-y-2.5 md:space-y-3 py-2 transition-all duration-300 ${
           pcAuthExpanded || pcQuickAccessExpanded
             ? 'md:my-auto'
             : 'md:mt-auto md:mb-[19vh]'
@@ -204,10 +204,13 @@ export function LoginPage(): React.ReactElement {
               className="h-12 w-12 shrink-0 rounded-full border-2 border-sky-400 bg-white object-cover shadow-lg"
             />
             <div className="min-w-0 text-center">
-              <div className="text-[11px] leading-snug font-extrabold uppercase tracking-wide text-sky-300 drop-shadow">
-                Commission de l’Enseignement — LIFRAS
+              <div className="text-[10px] leading-tight font-extrabold uppercase tracking-wide text-sky-300 drop-shadow">
+                Commission de l’Enseignement
               </div>
-              <h1 className="text-base sm:text-lg leading-tight font-extrabold tracking-tight text-white drop-shadow-md">
+              <div className="text-[10px] leading-tight font-extrabold uppercase tracking-wide text-sky-200 drop-shadow">
+                Pôle Formations &amp; Évaluations
+              </div>
+              <h1 className="mt-0.5 text-base sm:text-lg leading-tight font-extrabold tracking-tight text-white drop-shadow-md">
                 Carnet de Bord Digital CMN
               </h1>
             </div>
