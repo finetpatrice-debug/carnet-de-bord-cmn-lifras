@@ -31,6 +31,12 @@ export function RoleProtectedRoute({
   }
 
   if (!allowedRoles.includes(profile.role)) {
+    if (
+      profile.role === 'CMN_CANDIDATE' &&
+      location.pathname === '/evaluations'
+    ) {
+      return <Navigate to="/tableau-de-bord" replace />;
+    }
     return (
       <div className="flex min-h-[70vh] items-center justify-center p-6">
         <Card className="max-w-lg border-red-200 bg-white shadow-md">

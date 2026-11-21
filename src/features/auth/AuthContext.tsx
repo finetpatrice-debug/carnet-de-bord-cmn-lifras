@@ -17,7 +17,7 @@ interface AuthContextValue {
   loading: boolean;
   error: string | null;
   isDemoMode: boolean;
-  signInWithPassword: (email: string, password: string) => Promise<{ error: string | null }>;
+  signInWithPassword: (email: string, password: string) => Promise<{ error: string | null; role?: UserRole }>;
   activateAuthorizedAccess: (
     email: string,
     password: string
@@ -255,7 +255,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
   const signInWithPassword = async (
     email: string,
     password: string
-  ): Promise<{ error: string | null }> => {
+  ): Promise<{ error: string | null; role?: UserRole }> => {
     setError(null);
     const trimmedEmail = email.trim();
 
@@ -268,7 +268,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
         saveAuthorizedSession(authorizedProfile);
         setIsDemoMode(false);
         setError(null);
-        return { error: null };
+        return { error: null, role: authorizedProfile.role };
       }
       if (check === 'WRONG_PASSWORD') {
         const msg =
@@ -290,7 +290,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
             sbData.user.user_metadata
           );
           setIsDemoMode(false);
-          return { error: null };
+          return { error: null, role: authorizedProfile.role };
         }
       }
       const noPwdMsg =
@@ -314,7 +314,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
           signInData.user.user_metadata
         );
         setIsDemoMode(false);
-        return { error: null };
+        const metaRole = signInData.user.user_metadata?.role as UserRole | undefined;
+        return { error: null, role: metaRole ?? 'ADMIN_DTF' };
       }
     }
 

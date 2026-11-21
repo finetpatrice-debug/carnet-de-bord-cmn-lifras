@@ -46,7 +46,6 @@ import {
   RotateCcw,
   Send,
   UserCheck,
-  UserCog,
   Users,
   X,
 } from 'lucide-react';
@@ -502,27 +501,13 @@ export function EvaluationPage(): React.ReactElement {
         {!selectedCandidateId ? (
           <Card>
             <CardHeader className="pb-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center justify-between">
                 <CardTitle className="text-base">
                   1. Candidat CMN évalué (Promotion en cours)
                 </CardTitle>
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="text-[11px]">
-                    {activeCohortCandidates.length} CMN actifs
-                  </Badge>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() =>
-                      window.dispatchEvent(new Event('cmn-open-my-profile'))
-                    }
-                    className="h-7 border-sky-300 bg-sky-50 px-2.5 text-xs font-bold text-sky-900 hover:bg-sky-100"
-                  >
-                    <UserCog className="h-3.5 w-3.5" />
-                    Mes données personnelles
-                  </Button>
-                </div>
+                <Badge variant="outline" className="text-[11px]">
+                  {activeCohortCandidates.length} CMN actifs
+                </Badge>
               </div>
               <CardDescription>
                 Sélectionnez un candidat de la promotion en cours pour ouvrir sa grille d’évaluation terrain.

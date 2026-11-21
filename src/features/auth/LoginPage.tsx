@@ -69,7 +69,11 @@ export function LoginPage(): React.ReactElement {
     const res = await signInWithPassword(email, password);
     setSubmitting(false);
     if (!res.error) {
-      navigate('/evaluations');
+      if (res.role === 'CMN_CANDIDATE') {
+        navigate('/tableau-de-bord');
+      } else {
+        navigate('/evaluations');
+      }
     }
   };
 
