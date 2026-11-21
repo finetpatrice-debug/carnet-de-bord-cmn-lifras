@@ -170,7 +170,7 @@ export function LoginPage(): React.ReactElement {
 
       {/* Conteneur principal : centré sur GSM, recentré verticalement (entre le haut et le bas) et équilibré entre bord gauche et plongeur sur PC */}
       <div className="relative z-10 mx-auto md:mx-0 md:my-auto md:ml-[6%] lg:ml-[9%] xl:ml-[11%] w-full max-w-md lg:max-w-[440px] space-y-2.5 md:space-y-3 py-2">
-        {/* Bandeau vidéo affiché UNIQUEMENT sur GSM (< md), en boucle silencieuse avec poster immédiat */}
+        {/* Bandeau vidéo affiché UNIQUEMENT sur GSM (< md), en boucle silencieuse avec poster immédiat — agrandi pour mieux mettre en valeur la vidéo */}
         <div className="relative overflow-hidden rounded-xl border border-sky-400/30 shadow-xl md:hidden">
           <video
             autoPlay
@@ -180,7 +180,7 @@ export function LoginPage(): React.ReactElement {
             preload="auto"
             poster="/Cover Carnet de Bord light.jpg?v=2.0.0-cover2"
             aria-label="Moniteur National LIFRAS face à la mer — Carnet de Bord Digital CMN"
-            className="h-40 sm:h-44 w-full object-cover object-[65%_22%]"
+            className="h-56 sm:h-64 w-full object-cover object-[65%_22%]"
           >
             <source src="/accueil-cmn-video.mp4?v=2.0.6" type="video/mp4" />
           </video>
@@ -207,8 +207,8 @@ export function LoginPage(): React.ReactElement {
           </div>
         </div>
 
-        {/* Empilement vertical (Connexion & Inscription en haut, Accès rapide juste en dessous) pour laisser toute la moitié droite libre pour le plongeur */}
-        <div className="flex flex-col gap-2.5 md:gap-3">
+        {/* Empilement vertical (Connexion & Inscription en haut, Accès rapide juste en dessous) — légèrement abaissé sur GSM pour laisser respirer la vidéo */}
+        <div className="flex flex-col gap-2.5 pt-2 md:pt-0 md:gap-3">
           {/* Carte 1 : Authentification, Inscription & Mot de passe oublié — fond blanc net et écritures à haut contraste */}
           <Card className="border-slate-200 bg-white shadow-2xl">
             <CardHeader className="space-y-1 p-3.5 pb-1.5">
@@ -541,6 +541,18 @@ export function LoginPage(): React.ReactElement {
           </CardContent>
         </Card>
         </div>
+      </div>
+
+      {/* Signature concepteur tout en bas centré sur l'écran d'accueil GSM (format discret) */}
+      <div className="relative z-10 flex md:hidden items-center justify-center gap-1.5 pt-3 pb-1">
+        <span className="text-[10px] font-medium tracking-wide text-slate-400">
+          By
+        </span>
+        <img
+          src="/logo-dtf.jpg?v=2.0.15"
+          alt="Diving Technical Framework"
+          className="h-5 w-auto rounded-[3px] border border-sky-400/20 object-contain opacity-90 shadow-sm"
+        />
       </div>
     </div>
   );
