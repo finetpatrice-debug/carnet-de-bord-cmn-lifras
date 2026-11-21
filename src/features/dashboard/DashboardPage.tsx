@@ -429,7 +429,7 @@ export function DashboardPage(): React.ReactElement {
             </div>
           </div>
           <p className="mt-1 text-xs text-slate-500">
-            Cliquez sur un candidat pour démarrer directement son Évaluation Terrain, ou sur « Cockpit » pour consulter ses 5 piliers et son Radar.
+            Cliquez sur un candidat pour ouvrir son Tableau de Bord complet (Cockpit 5 Piliers, Radar, évaluations et bilan PDF), ou sur « Évaluer » pour saisir une évaluation terrain.
           </p>
         </div>
 
@@ -447,7 +447,10 @@ export function DashboardPage(): React.ReactElement {
               >
                 <button
                   type="button"
-                  onClick={() => navigate(`/evaluations?candidat=${cand.id}`)}
+                  onClick={() => {
+                    setSelectedCandidateId(cand.id);
+                    setActiveTab('OVERVIEW_AND_PILLARS');
+                  }}
                   className="flex min-w-0 items-center gap-2.5 text-left"
                 >
                   {cand.photo_storage_path ? (
@@ -477,13 +480,10 @@ export function DashboardPage(): React.ReactElement {
                   </span>
                   <button
                     type="button"
-                    onClick={() => {
-                      setSelectedCandidateId(cand.id);
-                      setActiveTab('OVERVIEW_AND_PILLARS');
-                    }}
+                    onClick={() => navigate(`/evaluations?candidat=${cand.id}`)}
                     className="rounded border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-bold text-slate-700 hover:border-sky-400 hover:bg-sky-100 hover:text-sky-900"
                   >
-                    Cockpit
+                    Évaluer
                   </button>
                 </div>
               </div>
