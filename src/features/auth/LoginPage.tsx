@@ -174,8 +174,14 @@ export function LoginPage(): React.ReactElement {
         </div>
       </div>
 
-      {/* Conteneur principal : centré sur GSM, recentré verticalement (entre le haut et le bas) et équilibré entre bord gauche et plongeur sur PC */}
-      <div className="relative z-10 mx-auto md:mx-0 md:my-auto md:ml-[6%] lg:ml-[9%] xl:ml-[11%] w-full max-w-md lg:max-w-[440px] space-y-2.5 md:space-y-3 py-2">
+      {/* Conteneur principal : centré sur GSM ; sur PC abaissé en bas à gauche au repos pour dégager le paysage, et recentré verticalement dès qu'un panneau est ouvert */}
+      <div
+        className={`relative z-10 mx-auto md:mx-0 md:ml-[6%] lg:ml-[9%] xl:ml-[11%] w-full max-w-md lg:max-w-[440px] space-y-2.5 md:space-y-3 py-2 transition-all duration-300 ${
+          pcAuthExpanded || pcQuickAccessExpanded
+            ? 'md:my-auto'
+            : 'md:mt-auto md:mb-[19vh]'
+        }`}
+      >
         {/* Bandeau vidéo affiché UNIQUEMENT sur GSM (< md), en boucle silencieuse avec poster immédiat — agrandi pour mieux mettre en valeur la vidéo */}
         <div className="relative overflow-hidden rounded-xl border border-sky-400/30 shadow-xl md:hidden">
           <video
