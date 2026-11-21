@@ -137,6 +137,8 @@ export function EvaluationPage(): React.ReactElement {
   const {
     candidates: storeCandidates,
     mnDirectory: storeEvaluators,
+    evaluations: storeEvaluations,
+    evaluationScores: storeEvaluationScores,
     recordFieldEvaluation,
   } = useAdminStore();
 
@@ -226,6 +228,72 @@ export function EvaluationPage(): React.ReactElement {
   const improvementsDictation = useSpeechDictation((chunk) => {
     setImprovementsComment((prev) => (prev ? `${prev} ${chunk}` : chunk));
   });
+
+  // Évaluations déjà existantes (import Excel + terrain) pour le candidat sélectionné
+  const candidateExistingEvals = useMemo(
+    () =>
+      selectedCandidateId
+        ? storeEvaluations.filter((ev) => ev.candidate_id === selectedCandidateId)
+        : [],
+    [storeEvaluations, selectedCandidateId]
+  );
+
+  // Résumé par épreuve (nombre d'évaluations déjà réalisées + moyenne %)
+  const examHistorySummaryMap = useMemo(() => {
+    const map = new Map<ExamCode, { count: number; avgFormatted: string }>();
+    for (const exam of OFFICIAL_EXAM_TYPES) {
+      const evals = candidateExistingEvals.filter((e) => e.exam_code === exam.code);
+      if (evals.length === 0) continue;
+      const evalIds = new Set(evals.map((e) => e.id));
+      const relevantScores = storeEvaluationScores.filter((sc) =>
+        evalIds.has(sc.evaluation_id)
+      );
+      const examCrits = criteriaList.filter(
+        (c) => c.exam_code === exam.code && c.is_active
+      );
+      const avg = computeExamAverage(exam.code, examCrits, relevantScores);
+      map.set(exam.code, {
+        count: evals.length,
+        avgFormatted: avg.formattedAverage,
+      });
+    }
+    return map;
+  }, [candidateExistingEvals, storeEvaluationScores, criteriaList]);
+
+  // Évaluations existantes sur l'épreuve actuellement ouverte (triées de la plus récente à la plus ancienne)
+  const currentExamExistingEvals = useMemo(
+    () =>
+      candidateExistingEvals
+        .filter((ev) => ev.exam_code === selectedExamCode)
+        .sort((a, b) => b.event_date.localeCompare(a.event_date)),
+    [candidateExistingEvals, selectedExamCode]
+  );
+
+  // Notes déjà transcrites par critère (Excel / Terrain) pour affichage direct sur chaque question
+  const criterionHistoryMap = useMemo(() => {
+    const map = new Map<
+      number,
+      { evalId: string; date: string; grade: GradeCode; jury: string; isExcel: boolean }[]
+    >();
+    const evalById = new Map(currentExamExistingEvals.map((e) => [e.id, e]));
+    for (const sc of storeEvaluationScores) {
+      const ev = evalById.get(sc.evaluation_id);
+      if (!ev) continue;
+      const list = map.get(sc.criterion_id) ?? [];
+      list.push({
+        evalId: ev.id,
+        date: ev.event_date,
+        grade: sc.grade,
+        jury: ev.legacy_evaluator_raw ?? 'MN',
+        isExcel: ev.legacy_row_id !== null && ev.legacy_row_id !== undefined,
+      });
+      map.set(sc.criterion_id, list);
+    }
+    for (const [, list] of map) {
+      list.sort((a, b) => a.date.localeCompare(b.date));
+    }
+    return map;
+  }, [currentExamExistingEvals, storeEvaluationScores]);
 
   // Critères actifs de l'épreuve sélectionnée
   const examCriteria = useMemo(
@@ -744,25 +812,26 @@ export function EvaluationPage(): React.ReactElement {
           </CardContent>
         </Card>
 
-        {/* 3. Choix visuel par cartes claires des 10 épreuves réglementaires */}
+        {/* 3. Choix visuel par cartes claires des épreuves réglementaires avec statut Excel / Terrain */}
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
               <Calendar className="h-4 w-4 text-sky-600" />
               <CardTitle className="text-base">
-                3. Choix de l’Épreuve Réglementaire (10 épreuves)
+                3. Choix de l’Épreuve Réglementaire ({OFFICIAL_EXAM_TYPES.length} épreuves)
               </CardTitle>
             </div>
             <CardDescription>
-              Chaque carte indique le nombre exact de critères officiels à évaluer.
+              Chaque carte affiche le nombre de questions et les évaluations déjà réalisées (import Excel + terrain).
             </CardDescription>
           </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-2.5 sm:grid-cols-5">
+          <CardContent className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 lg:grid-cols-5">
             {OFFICIAL_EXAM_TYPES.map((exam) => {
               const count = criteriaList.filter(
                 (c) => c.exam_code === exam.code && c.is_active
               ).length;
               const isSelected = exam.code === selectedExamCode;
+              const history = examHistorySummaryMap.get(exam.code);
               return (
                 <button
                   key={exam.code}
@@ -771,7 +840,9 @@ export function EvaluationPage(): React.ReactElement {
                   className={`flex flex-col justify-between rounded-xl border p-3 text-left transition ${
                     isSelected
                       ? 'border-sky-600 bg-sky-600 text-white shadow-md'
-                      : 'border-slate-200 bg-slate-50/70 text-slate-800 hover:border-sky-300 hover:bg-white'
+                      : history
+                        ? 'border-emerald-300 bg-emerald-50/40 text-slate-800 hover:border-sky-400 hover:bg-white'
+                        : 'border-slate-200 bg-slate-50/70 text-slate-800 hover:border-sky-300 hover:bg-white'
                   }`}
                 >
                   <div className="flex items-center justify-between gap-1">
@@ -789,17 +860,104 @@ export function EvaluationPage(): React.ReactElement {
                           : 'bg-sky-100 text-sky-800'
                       }`}
                     >
-                      {count} questions
+                      {count} q.
                     </span>
                   </div>
-                  <div className="mt-2 text-xs font-bold leading-snug">
+                  <div className="mt-1.5 text-xs font-bold leading-snug">
                     {exam.short_title}
+                  </div>
+                  <div className="mt-2">
+                    {history ? (
+                      <span
+                        className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-bold ${
+                          isSelected
+                            ? 'bg-emerald-400/25 text-emerald-100'
+                            : 'bg-emerald-100 text-emerald-800'
+                        }`}
+                      >
+                        ✓ {history.count} éval. • {history.avgFormatted}
+                      </span>
+                    ) : (
+                      <span
+                        className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-medium ${
+                          isSelected
+                            ? 'bg-white/15 text-sky-100'
+                            : 'bg-slate-200/70 text-slate-500'
+                        }`}
+                      >
+                        À évaluer (0)
+                      </span>
+                    )}
                   </div>
                 </button>
               );
             })}
           </CardContent>
         </Card>
+
+        {/* Rappel des évaluations déjà transcrites (Import Excel & Terrain) pour cette épreuve */}
+        {currentExamExistingEvals.length > 0 && (
+          <Card className="border-emerald-300 bg-emerald-50/40">
+            <CardHeader className="pb-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2 text-emerald-900">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                  <CardTitle className="text-sm font-bold">
+                    Évaluations déjà enregistrées sur cette épreuve ({currentExamExistingEvals.length})
+                  </CardTitle>
+                </div>
+                <Badge className="bg-emerald-600 text-white text-[11px]">
+                  Moyenne cumulée : {examHistorySummaryMap.get(selectedExamCode)?.avgFormatted ?? '—'}
+                </Badge>
+              </div>
+              <CardDescription className="text-xs text-emerald-950/80">
+                Les notes déjà importées depuis Excel ou saisies sur le terrain apparaissent directement sous chaque question ci-dessous. Votre nouvelle saisie s’ajoutera automatiquement à la suite du cursus sans jamais écraser l’historique.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-1.5 pt-1">
+              {currentExamExistingEvals.map((ev) => {
+                const evScores = storeEvaluationScores.filter(
+                  (sc) => sc.evaluation_id === ev.id
+                );
+                const evAvg = computeExamAverage(
+                  selectedExamCode,
+                  examCriteria,
+                  evScores
+                );
+                const isExcelImport =
+                  ev.legacy_row_id !== null && ev.legacy_row_id !== undefined;
+                return (
+                  <div
+                    key={ev.id}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-emerald-200 bg-white px-3 py-2 text-xs"
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-mono font-bold text-slate-800">
+                        {ev.event_date}
+                      </span>
+                      <Badge
+                        variant="outline"
+                        className={
+                          isExcelImport
+                            ? 'border-sky-300 bg-sky-50 text-[10px] text-sky-800'
+                            : 'border-emerald-300 bg-emerald-50 text-[10px] text-emerald-800'
+                        }
+                      >
+                        {isExcelImport ? 'Import Excel' : 'Éval. Terrain'}
+                      </Badge>
+                      <span className="text-slate-600">
+                        Jury : <strong>{ev.legacy_evaluator_raw ?? 'MN'}</strong>
+                      </span>
+                    </div>
+                    <span className="font-mono font-bold text-emerald-700">
+                      {evAvg.formattedAverage}
+                    </span>
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+        )}
 
         {/* 4. Grille d'évaluation dynamique regroupée par pilier de compétence */}
         <div className="space-y-4">
@@ -829,6 +987,7 @@ export function EvaluationPage(): React.ReactElement {
               <CardContent className="divide-y divide-slate-200 p-0">
                 {group.items.map((criterion) => {
                   const selectedGrade = gradesByCriterion[criterion.id];
+                  const pastGrades = criterionHistoryMap.get(criterion.id) ?? [];
                   return (
                     <div key={criterion.id} className="p-4 space-y-3">
                       <div className="flex items-start justify-between gap-2">
@@ -862,6 +1021,25 @@ export function EvaluationPage(): React.ReactElement {
                           </Badge>
                         )}
                       </div>
+
+                      {/* Rappel des notes déjà transcrites (Excel / Terrain) pour cette question */}
+                      {pastGrades.length > 0 && (
+                        <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-sky-200/80 bg-sky-50/60 px-2.5 py-1.5 text-[11px]">
+                          <span className="font-semibold text-sky-900">
+                            Déjà coté ({pastGrades.length}) :
+                          </span>
+                          {pastGrades.map((pg, idx) => (
+                            <span
+                              key={`${pg.evalId}-${idx}`}
+                              title={`${pg.isExcel ? 'Import Excel' : 'Terrain'} — ${pg.jury} (${pg.date})`}
+                              className="inline-flex items-center gap-1 rounded-md border border-sky-200 bg-white px-2 py-0.5 font-mono text-[10px] font-bold text-slate-800"
+                            >
+                              <span className="text-slate-400">{pg.date.slice(5)}</span>
+                              <span className="text-sky-800">{GRADE_LABELS[pg.grade]}</span>
+                            </span>
+                          ))}
+                        </div>
+                      )}
 
                       {/* 7 boutons tactiles larges et contrastés utilisables à une main (10, 8, 6, 4, 2, 1, NE) */}
                       <div

@@ -410,6 +410,19 @@ export function ImportPage(): React.ReactElement {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Information claire sur le fonctionnement de l'import Excel pour un candidat en cours de cursus */}
+          <div className="rounded-xl border border-sky-200 bg-sky-50/80 p-3.5 text-xs text-sky-950 space-y-1">
+            <div className="font-bold text-sky-900">
+              Comment se déroule un import Excel pour un candidat en cours de cursus ?
+            </div>
+            <p>
+              1. <strong>Transcription complète</strong> : toutes les évaluations, notes par critère et commentaires du classeur Excel sont intégrés dans le <strong>Tableau de Bord</strong> (5 piliers, Radar, bilans PDF) <strong>et</strong> répercutés automatiquement en rappel sur chaque épreuve et chaque question de l’onglet <strong>Évaluation Terrain</strong>.
+            </p>
+            <p>
+              2. <strong>Continuité des évaluations terrain</strong> : après l’import, les Moniteurs Nationaux continuent à évaluer normalement le candidat dans l’application. Chaque nouvelle évaluation terrain s’ajoute à la suite de son historique sans jamais écraser ni dupliquer les notes importées.
+            </p>
+          </div>
+
           <div
             onDragOver={(e) => {
               e.preventDefault();
