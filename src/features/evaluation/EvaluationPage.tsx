@@ -35,6 +35,7 @@ import {
 } from '@/components/ui/card';
 import {
   AlertCircle,
+  ArrowLeft,
   Calendar,
   CheckCircle2,
   ChevronDown,
@@ -174,6 +175,12 @@ export function EvaluationPage(): React.ReactElement {
 
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(
     () => initialCandidateFromUrl ?? null
+  );
+
+  const selectedCandidate = useMemo(
+    () =>
+      activeCohortCandidates.find((c) => c.id === selectedCandidateId) ?? null,
+    [activeCohortCandidates, selectedCandidateId]
   );
 
   useEffect(() => {
@@ -504,40 +511,29 @@ export function EvaluationPage(): React.ReactElement {
       )}
 
       <form onSubmit={(e) => void handleSubmitEvaluation(e)} className="space-y-5">
-        {/* 1. Sélection rapide du Candidat CMN (avec photo/avatar et club, filtré cohorte active) */}
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base">
-                1. Candidat CMN évalué (Promotion en cours)
-              </CardTitle>
-              <Badge variant="outline" className="text-[11px]">
-                {activeCohortCandidates.length} CMN actifs
-              </Badge>
-            </div>
-            <CardDescription>
-              {selectedCandidateId
-                ? 'Candidat sélectionné : remplissez la grille d’évaluation ci-dessous (cliquez sur un autre candidat pour changer).'
-                : 'Sélectionnez un candidat de la promotion en cours pour ouvrir sa grille d’évaluation terrain.'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4">
-            {activeCohortCandidates.map((cand) => {
-              const isSelected = cand.id === selectedCandidateId;
-              return (
+        {/* 1. Sélection rapide du Candidat CMN — tous les autres candidats sont masqués dès qu'un candidat est choisi */}
+        {!selectedCandidateId ? (
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base">
+                  1. Candidat CMN évalué (Promotion en cours)
+                </CardTitle>
+                <Badge variant="outline" className="text-[11px]">
+                  {activeCohortCandidates.length} CMN actifs
+                </Badge>
+              </div>
+              <CardDescription>
+                Sélectionnez un candidat de la promotion en cours pour ouvrir sa grille d’évaluation terrain.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4">
+              {activeCohortCandidates.map((cand) => (
                 <button
                   key={cand.id}
                   type="button"
-                  onClick={() =>
-                    setSelectedCandidateId((prev) =>
-                      prev === cand.id ? null : cand.id
-                    )
-                  }
-                  className={`flex min-w-0 items-center gap-2.5 rounded-xl border p-2.5 text-left transition ${
-                    isSelected
-                      ? 'border-sky-600 bg-sky-50/90 ring-2 ring-sky-500/40 shadow-sm'
-                      : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
-                  }`}
+                  onClick={() => setSelectedCandidateId(cand.id)}
+                  className="flex min-w-0 items-center gap-2.5 rounded-xl border border-slate-200 bg-white p-2.5 text-left transition hover:border-sky-500 hover:bg-sky-50/50 hover:shadow-sm"
                 >
                   {cand.photo_storage_path ? (
                     <img
@@ -546,13 +542,7 @@ export function EvaluationPage(): React.ReactElement {
                       className="h-11 w-11 shrink-0 rounded-full border border-sky-400 object-cover"
                     />
                   ) : (
-                    <div
-                      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
-                        isSelected
-                          ? 'bg-sky-600 text-white'
-                          : 'bg-slate-200 text-slate-700'
-                      }`}
-                    >
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-slate-200 text-sm font-bold text-slate-700">
                       {getInitials(cand.first_name, cand.last_name)}
                     </div>
                   )}
@@ -568,10 +558,57 @@ export function EvaluationPage(): React.ReactElement {
                     </div>
                   </div>
                 </button>
-              );
-            })}
-          </CardContent>
-        </Card>
+              ))}
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="border-sky-300 bg-sky-50/50">
+            <CardContent className="flex flex-wrap items-center justify-between gap-3 p-3.5">
+              <div className="flex min-w-0 items-center gap-3">
+                {selectedCandidate?.photo_storage_path ? (
+                  <img
+                    src={selectedCandidate.photo_storage_path}
+                    alt={`${selectedCandidate.first_name} ${selectedCandidate.last_name}`}
+                    className="h-12 w-12 shrink-0 rounded-full border-2 border-sky-500 object-cover shadow-sm"
+                  />
+                ) : (
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-sky-600 text-sm font-bold text-white shadow-sm">
+                    {selectedCandidate
+                      ? getInitials(
+                          selectedCandidate.first_name,
+                          selectedCandidate.last_name
+                        )
+                      : 'CMN'}
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <div className="text-[11px] font-bold uppercase tracking-wide text-sky-700">
+                    Candidat évalué
+                  </div>
+                  <div className="truncate text-base font-extrabold text-slate-900">
+                    {selectedCandidate?.first_name} {selectedCandidate?.last_name}
+                  </div>
+                  <div className="truncate text-xs text-slate-600">
+                    {selectedCandidate?.club_name ?? 'Club LIFRAS'}
+                    {selectedCandidate?.febras_number
+                      ? ` • FEBRAS #${selectedCandidate.febras_number}`
+                      : ''}
+                  </div>
+                </div>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => setSelectedCandidateId(null)}
+                className="h-8 border-sky-300 bg-white text-xs font-bold text-sky-900 hover:bg-sky-100"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" />
+                Changer de candidat
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         {selectedCandidateId && (
         <>
