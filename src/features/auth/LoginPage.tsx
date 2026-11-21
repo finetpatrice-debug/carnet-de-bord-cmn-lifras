@@ -185,9 +185,6 @@ export function LoginPage(): React.ReactElement {
             <source src="/accueil-cmn-video.mp4?v=2.0.6" type="video/mp4" />
           </video>
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/30 to-transparent" />
-          <Badge className="absolute top-2 right-2 border border-emerald-400/50 bg-slate-950/70 px-1.5 py-0.5 font-mono text-[10px] text-emerald-200 backdrop-blur-sm">
-            {APP_VERSION}
-          </Badge>
           <div className="absolute bottom-0 left-0 right-0 flex items-center justify-center gap-3 px-3 py-3">
             <img
               src="/logo-lifras.jpg"
@@ -541,16 +538,21 @@ export function LoginPage(): React.ReactElement {
         </div>
       </div>
 
-      {/* Signature concepteur tout en bas centré sur l'écran d'accueil GSM (format discret et lisible) */}
-      <div className="relative z-10 flex md:hidden items-center justify-center gap-2 pt-3 pb-1">
-        <span className="text-xs font-medium tracking-wide text-slate-300">
-          By
-        </span>
-        <img
-          src="/logo-dtf.jpg?v=2.0.16"
-          alt="Diving Technical Framework"
-          className="h-8 w-auto rounded border border-sky-400/25 object-contain shadow-sm"
-        />
+      {/* Signature concepteur + badge de version tout en bas centré sur l'écran d'accueil GSM */}
+      <div className="relative z-10 flex md:hidden items-center justify-center gap-2.5 pt-3 pb-1">
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs font-medium tracking-wide text-slate-300">
+            By
+          </span>
+          <img
+            src="/logo-dtf.jpg?v=2.0.16"
+            alt="Diving Technical Framework"
+            className="h-8 w-auto rounded border border-sky-400/25 object-contain shadow-sm"
+          />
+        </div>
+        <Badge className="shrink-0 border border-emerald-400/50 bg-slate-950/75 px-1.5 py-0.5 font-mono text-[10px] text-emerald-200 backdrop-blur-sm">
+          {APP_VERSION}
+        </Badge>
       </div>
     </div>
   );
