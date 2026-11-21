@@ -882,10 +882,10 @@ export function DashboardPage(): React.ReactElement {
                               <td className="px-3 py-2 text-center font-semibold">
                                 {exSummary.evaluationCount}
                               </td>
-                              <td className="px-3 py-2 text-center font-mono text-slate-600">
+                              <td className="px-3 py-2 text-center font-mono whitespace-nowrap text-slate-600">
                                 {cell ? `${cell.J} items (${cell.K} pts)` : '—'}
                               </td>
-                              <td className="px-3 py-2 text-right font-bold text-sky-700">
+                              <td className="px-3 py-2 text-right font-bold whitespace-nowrap text-sky-700">
                                 {cell?.formattedScore ?? 'Non évalué'}
                               </td>
                             </tr>
@@ -1191,13 +1191,13 @@ export function DashboardPage(): React.ReactElement {
                     <table className="w-full text-left text-xs">
                       <thead>
                         <tr className="border-b bg-slate-900 text-white">
-                          <th className="px-3 py-2.5">Code</th>
-                          <th className="px-3 py-2.5">Pilier</th>
-                          <th className="px-3 py-2.5">Question évaluée</th>
+                          <th className="w-px whitespace-nowrap px-2.5 py-2.5">Code</th>
+                          <th className="w-px whitespace-nowrap px-2.5 py-2.5">Pilier</th>
+                          <th className="min-w-[260px] px-3 py-2.5">Question évaluée</th>
                           {examEvals.map((ev, idx) => (
                             <th
                               key={ev.id}
-                              className="px-2.5 py-2.5 text-center whitespace-nowrap"
+                              className="w-px whitespace-nowrap px-2.5 py-2.5 text-center"
                               title={`Jury : ${ev.legacy_evaluator_raw ?? 'MN'}`}
                             >
                               <div>Séance #{idx + 1}</div>
@@ -1209,8 +1209,8 @@ export function DashboardPage(): React.ReactElement {
                               </div>
                             </th>
                           ))}
-                          <th className="px-3 py-2.5 text-right">Moyenne Item</th>
-                          <th className="px-3 py-2.5 text-center">Évolution</th>
+                          <th className="w-px whitespace-nowrap px-3 py-2.5 text-right">Moyenne Item</th>
+                          <th className="w-px whitespace-nowrap px-3 py-2.5 text-center">Évolution</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y">
@@ -1246,25 +1246,25 @@ export function DashboardPage(): React.ReactElement {
                             const delta = lastPt - firstPt;
                             if (delta > 0) {
                               trendBadge = (
-                                <Badge className="bg-emerald-600 text-white">
+                                <Badge className="whitespace-nowrap bg-emerald-600 text-white">
                                   +{delta} pts (En progrès)
                                 </Badge>
                               );
                             } else if (delta < 0) {
                               trendBadge = (
-                                <Badge variant="destructive">
+                                <Badge variant="destructive" className="whitespace-nowrap">
                                   {delta} pts (Vigilance)
                                 </Badge>
                               );
                             } else if (lastPt <= 4) {
                               trendBadge = (
-                                <Badge variant="destructive">
+                                <Badge variant="destructive" className="whitespace-nowrap">
                                   À retravailler ({lastPt}/10)
                                 </Badge>
                               );
                             } else {
                               trendBadge = (
-                                <Badge variant="secondary">
+                                <Badge variant="secondary" className="whitespace-nowrap">
                                   Stable ({lastPt}/10)
                                 </Badge>
                               );
@@ -1274,7 +1274,7 @@ export function DashboardPage(): React.ReactElement {
                             numericPoints[0] <= 4
                           ) {
                             trendBadge = (
-                              <Badge variant="destructive">
+                              <Badge variant="destructive" className="whitespace-nowrap">
                                 À retravailler ({numericPoints[0]}/10)
                               </Badge>
                             );
@@ -1282,11 +1282,11 @@ export function DashboardPage(): React.ReactElement {
 
                           return (
                             <tr key={crit.id} className="hover:bg-slate-50">
-                              <td className="px-3 py-2.5 font-mono font-bold text-sky-700">
+                              <td className="w-px whitespace-nowrap px-2.5 py-2.5 font-mono font-bold text-sky-700">
                                 [{crit.excel_col}]
                               </td>
-                              <td className="px-3 py-2.5">
-                                <Badge variant="outline" className="text-[10px]">
+                              <td className="w-px whitespace-nowrap px-2.5 py-2.5">
+                                <Badge variant="outline" className="whitespace-nowrap text-[10px]">
                                   {crit.pillar_code}
                                 </Badge>
                               </td>
@@ -1296,7 +1296,7 @@ export function DashboardPage(): React.ReactElement {
                               {gradesByEval.map((g, idx) => (
                                 <td
                                   key={examEvals[idx].id}
-                                  className="px-2.5 py-2.5 text-center"
+                                  className="w-px whitespace-nowrap px-2.5 py-2.5 text-center"
                                 >
                                   <span
                                     className={`inline-flex min-w-[32px] items-center justify-center rounded-md px-2 py-0.5 font-mono text-xs font-extrabold text-white ${GRADE_STACK_COLORS[g].bg}`}
@@ -1305,14 +1305,14 @@ export function DashboardPage(): React.ReactElement {
                                   </span>
                                 </td>
                               ))}
-                              <td className="px-3 py-2.5 text-right font-mono font-bold text-slate-900">
+                              <td className="w-px whitespace-nowrap px-3 py-2.5 text-right font-mono font-bold text-slate-900">
                                 {itemAvg !== null
                                   ? `${itemAvg.toFixed(1).replace('.', ',')} / 10 (${Math.round(
                                       itemAvg * 10
                                     )} %)`
                                   : 'Non évalué'}
                               </td>
-                              <td className="px-3 py-2.5 text-center">
+                              <td className="w-px whitespace-nowrap px-3 py-2.5 text-center">
                                 {trendBadge}
                               </td>
                             </tr>
@@ -1544,7 +1544,7 @@ export function DashboardPage(): React.ReactElement {
                       {OFFICIAL_PILLARS.map((p) => (
                         <td
                           key={p.code}
-                          className="px-3 py-3 text-right font-mono font-semibold"
+                          className="whitespace-nowrap px-3 py-3 text-right font-mono font-semibold"
                         >
                           {row.scoreboard.formattedGlobalPillarScores[p.code]}
                         </td>
