@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useAdminStore } from '@/features/admin/AdminStoreContext';
@@ -36,6 +37,8 @@ import {
   AlertCircle,
   Calendar,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   ClipboardCheck,
   Mic,
   MicOff,
@@ -166,13 +169,29 @@ export function EvaluationPage(): React.ReactElement {
     [candidatesList]
   );
 
+  const [searchParams] = useSearchParams();
+  const initialCandidateFromUrl = searchParams.get('candidat');
+
   const [selectedCandidateId, setSelectedCandidateId] = useState<string>(
-    () => activeCohortCandidates[0]?.id ?? 'cand-thomas-peeters'
+    () =>
+      initialCandidateFromUrl ??
+      activeCohortCandidates[0]?.id ??
+      'cand-thomas-peeters'
   );
+
+  useEffect(() => {
+    if (
+      initialCandidateFromUrl &&
+      activeCohortCandidates.some((c) => c.id === initialCandidateFromUrl)
+    ) {
+      setSelectedCandidateId(initialCandidateFromUrl);
+    }
+  }, [initialCandidateFromUrl, activeCohortCandidates]);
   const [selectedCoEvaluatorIds, setSelectedCoEvaluatorIds] = useState<string[]>(
     []
   );
   const [coEvalSearchQuery, setCoEvalSearchQuery] = useState<string>('');
+  const [showCoEvalDirectory, setShowCoEvalDirectory] = useState<boolean>(false);
   const [eventDate, setEventDate] = useState<string>(() =>
     new Date().toISOString().slice(0, 10)
   );
@@ -601,12 +620,33 @@ export function EvaluationPage(): React.ReactElement {
 
             {/* Puces des co-examinateurs sélectionnés */}
             <div className="space-y-2">
-              <label
-                htmlFor="co-evaluator-search"
-                className="text-xs font-semibold uppercase text-slate-500"
-              >
-                Co-examinateurs MN (optionnel — sélection par puces)
-              </label>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <label
+                  htmlFor="co-evaluator-search"
+                  className="text-xs font-semibold uppercase text-slate-500"
+                >
+                  Co-examinateurs MN (optionnel)
+                </label>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShowCoEvalDirectory((prev) => !prev)}
+                  className="h-7 px-2.5 text-xs"
+                >
+                  {showCoEvalDirectory ? (
+                    <>
+                      <ChevronUp className="h-3.5 w-3.5" />
+                      Réduire la liste
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="h-3.5 w-3.5" />
+                      Déplier la liste ({filteredEvaluatorSuggestions.filter((m) => m.role !== 'CMN_CANDIDATE').length})
+                    </>
+                  )}
+                </Button>
+              </div>
 
               {selectedCoEvaluatorIds.length > 0 && (
                 <div className="flex flex-wrap gap-2 py-1">
@@ -619,7 +659,8 @@ export function EvaluationPage(): React.ReactElement {
                         className="inline-flex items-center gap-1.5 rounded-full border border-sky-300 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-900"
                       >
                         <span>
-                          {mn.first_name} {mn.last_name} (#{mn.febras_number})
+                          {mn.first_name} {mn.last_name}
+                          {mn.febras_number ? ` (#${mn.febras_number})` : ''}
                         </span>
                         <button
                           type="button"
@@ -637,30 +678,38 @@ export function EvaluationPage(): React.ReactElement {
 
               <Input
                 id="co-evaluator-search"
-                placeholder="Filtrer l’annuaire MN par nom ou matricule FEBRAS..."
+                placeholder="Taper un nom pour ajouter un co-examinateur MN (ou cliquez sur Déplier)..."
                 value={coEvalSearchQuery}
                 onChange={(e) => setCoEvalSearchQuery(e.target.value)}
                 className="h-9 text-sm"
               />
 
-              {/* Liste de puces auto-complétées issues de l'annuaire MN_EVALUATOR */}
-              <div className="flex flex-wrap gap-1.5 pt-1">
-                {filteredEvaluatorSuggestions.map((mn) => (
-                  <button
-                    key={mn.id}
-                    type="button"
-                    onClick={() => addCoEvaluator(mn.id)}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:border-sky-400 hover:bg-sky-50 hover:text-sky-900"
-                  >
-                    <span>
-                      + {mn.first_name} {mn.last_name}
-                    </span>
-                    <span className="font-mono text-[10px] text-slate-400">
-                      #{mn.febras_number}
-                    </span>
-                  </button>
-                ))}
-              </div>
+              {/* Liste de puces compacte et déroulante, affichée uniquement sur recherche ou clic sur Déplier */}
+              {(showCoEvalDirectory || coEvalSearchQuery.trim().length > 0) && (
+                <div className="max-h-40 overflow-y-auto rounded-lg border border-slate-200 bg-slate-50/70 p-2">
+                  <div className="flex flex-wrap gap-1.5">
+                    {filteredEvaluatorSuggestions
+                      .filter((mn) => mn.role !== 'CMN_CANDIDATE')
+                      .map((mn) => (
+                        <button
+                          key={mn.id}
+                          type="button"
+                          onClick={() => addCoEvaluator(mn.id)}
+                          className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 transition hover:border-sky-400 hover:bg-sky-50 hover:text-sky-900"
+                        >
+                          <span>
+                            + {mn.first_name} {mn.last_name}
+                          </span>
+                          {mn.febras_number && (
+                            <span className="font-mono text-[10px] text-slate-400">
+                              #{mn.febras_number}
+                            </span>
+                          )}
+                        </button>
+                      ))}
+                  </div>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

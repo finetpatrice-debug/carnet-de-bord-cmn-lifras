@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   PolarAngleAxis,
   PolarGrid,
@@ -179,6 +180,7 @@ function renderWrappedRadarTick(
 
 export function DashboardPage(): React.ReactElement {
   const { profile } = useAuth();
+  const navigate = useNavigate();
   const { candidates, mnDirectory, evaluations, evaluationScores } =
     useAdminStore();
 
@@ -427,7 +429,7 @@ export function DashboardPage(): React.ReactElement {
             </div>
           </div>
           <p className="mt-1 text-xs text-slate-500">
-            Sélectionnez un candidat pour ouvrir son Cockpit 5 Piliers, son Radar et le détail de ses évaluations.
+            Cliquez sur un candidat pour démarrer directement son Évaluation Terrain, ou sur « Cockpit » pour consulter ses 5 piliers et son Radar.
           </p>
         </div>
 
@@ -439,39 +441,52 @@ export function DashboardPage(): React.ReactElement {
             ).length;
             const candInitials = `${cand.first_name.charAt(0)}${cand.last_name.charAt(0)}`.toUpperCase();
             return (
-              <button
+              <div
                 key={cand.id}
-                type="button"
-                onClick={() => {
-                  setSelectedCandidateId(cand.id);
-                  setActiveTab('OVERVIEW_AND_PILLARS');
-                }}
-                className="group flex min-w-0 items-center gap-2.5 rounded-xl border border-slate-200 bg-white p-2.5 text-left shadow-sm transition hover:border-sky-500 hover:bg-sky-50/40 hover:shadow-md"
+                className="group flex min-w-0 flex-col justify-between gap-2 rounded-xl border border-slate-200 bg-white p-2.5 shadow-sm transition hover:border-sky-500 hover:bg-sky-50/40 hover:shadow-md"
               >
-                {cand.photo_storage_path ? (
-                  <img
-                    src={cand.photo_storage_path}
-                    alt={`${cand.first_name} ${cand.last_name}`}
-                    className="h-10 w-10 shrink-0 rounded-full border-2 border-sky-400 object-cover"
-                  />
-                ) : (
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sky-600 to-slate-800 text-xs font-extrabold text-white">
-                    {candInitials}
+                <button
+                  type="button"
+                  onClick={() => navigate(`/evaluations?candidat=${cand.id}`)}
+                  className="flex min-w-0 items-center gap-2.5 text-left"
+                >
+                  {cand.photo_storage_path ? (
+                    <img
+                      src={cand.photo_storage_path}
+                      alt={`${cand.first_name} ${cand.last_name}`}
+                      className="h-10 w-10 shrink-0 rounded-full border-2 border-sky-400 object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sky-600 to-slate-800 text-xs font-extrabold text-white">
+                      {candInitials}
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-xs font-bold text-slate-900 group-hover:text-sky-800">
+                      {cand.first_name} {cand.last_name}
+                    </div>
+                    <div className="truncate text-[10px] text-slate-500">
+                      {cand.club_name ?? 'LIFRAS'}
+                      {cand.febras_number ? ` • #${cand.febras_number}` : ''}
+                    </div>
                   </div>
-                )}
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-xs font-bold text-slate-900 group-hover:text-sky-800">
-                    {cand.first_name} {cand.last_name}
-                  </div>
-                  <div className="truncate text-[10px] text-slate-500">
-                    {cand.club_name ?? 'LIFRAS'}
-                    {cand.febras_number ? ` • #${cand.febras_number}` : ''}
-                  </div>
-                  <div className="mt-0.5 inline-flex items-center rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700">
+                </button>
+                <div className="flex items-center justify-between gap-1 border-t border-slate-100 pt-1.5">
+                  <span className="inline-flex items-center rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700">
                     {evalCount} éval.
-                  </div>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedCandidateId(cand.id);
+                      setActiveTab('OVERVIEW_AND_PILLARS');
+                    }}
+                    className="rounded border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-bold text-slate-700 hover:border-sky-400 hover:bg-sky-100 hover:text-sky-900"
+                  >
+                    Cockpit
+                  </button>
                 </div>
-              </button>
+              </div>
             );
           })}
         </div>

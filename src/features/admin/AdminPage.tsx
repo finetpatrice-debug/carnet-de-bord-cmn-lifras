@@ -52,6 +52,7 @@ import {
   Radio,
   RefreshCw,
   RotateCcw,
+  Search,
   Shield,
   Smartphone,
   Trash2,
@@ -237,6 +238,10 @@ export function AdminPage(): React.ReactElement {
 
   // Affichage de l'Outil de Reclassement (section 1) : replié par défaut à l'ouverture
   const [reclassifyViewSize, setReclassifyViewSize] = useState<'collapsed' | 'compact' | 'expanded'>('collapsed');
+
+  // Recherche et repli/dépli de l'annuaire des profils (section 2)
+  const [profileSearchQuery, setProfileSearchQuery] = useState<string>('');
+  const [profilesListExpanded, setProfilesListExpanded] = useState<boolean>(false);
 
   // Module isolé Connexions & Présence (strictement réservé au concepteur, replié par défaut)
   const [presenceExpanded, setPresenceExpanded] = useState<boolean>(false);
@@ -951,11 +956,35 @@ export function AdminPage(): React.ReactElement {
       {/* 2. Annuaire Officiel des Moniteurs Nationaux, Administrateurs & Gestion des Rôles */}
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-2 text-sky-700">
-            <Users className="h-5 w-5" />
-            <CardTitle className="text-base">
-              2. Gestion des Profils, Administrateurs, Moniteurs Nationaux (MN) & Alias Excel
-            </CardTitle>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-2 text-sky-700">
+              <Users className="h-5 w-5" />
+              <CardTitle className="text-base">
+                2. Gestion des Profils, Administrateurs, Moniteurs Nationaux (MN) & Alias Excel
+              </CardTitle>
+              <Badge variant="secondary" className="text-[11px]">
+                {mnDirectory.length + candidates.length} profils
+              </Badge>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              variant={profilesListExpanded ? 'outline' : 'default'}
+              onClick={() => setProfilesListExpanded((prev) => !prev)}
+              className="h-7 px-2.5 text-xs"
+            >
+              {profilesListExpanded ? (
+                <>
+                  <ChevronUp className="h-3.5 w-3.5" />
+                  Réduire la liste
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="h-3.5 w-3.5" />
+                  Déplier la liste
+                </>
+              )}
+            </Button>
           </div>
           <CardDescription>
             Modifiez directement ici le rôle d’un utilisateur (
@@ -965,6 +994,26 @@ export function AdminPage(): React.ReactElement {
             variantes orthographiques (<code>profiles.aliases</code>) pour l’import
             Excel.
           </CardDescription>
+          <div className="relative mt-2">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <Input
+              type="text"
+              placeholder="Rechercher un profil par nom, prénom, e-mail, club, rôle ou n° FEBRAS..."
+              value={profileSearchQuery}
+              onChange={(e) => setProfileSearchQuery(e.target.value)}
+              className="h-9 bg-white pl-9 pr-9 text-xs"
+            />
+            {profileSearchQuery && (
+              <button
+                type="button"
+                aria-label="Effacer la recherche"
+                onClick={() => setProfileSearchQuery('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           {editingProfile && (
@@ -1335,8 +1384,16 @@ export function AdminPage(): React.ReactElement {
             </div>
           )}
 
-          <div className="grid gap-4 md:grid-cols-2">
-            {[...mnDirectory, ...candidates].map((mn) => (
+          {(profilesListExpanded || profileSearchQuery.trim().length > 0) && (
+            <div className="grid gap-4 md:grid-cols-2">
+              {[...mnDirectory, ...candidates]
+                .filter((mn) => {
+                  const q = profileSearchQuery.trim().toLowerCase();
+                  if (!q) return true;
+                  const hay = `${mn.first_name} ${mn.last_name} ${mn.email} ${mn.club_name ?? ''} ${mn.febras_number ?? ''} ${USER_ROLE_LABELS[mn.role]}`.toLowerCase();
+                  return hay.includes(q);
+                })
+                .map((mn) => (
               <div
                 key={mn.id}
                 className="flex flex-col justify-between rounded-lg border bg-slate-50/70 p-4"
@@ -1466,6 +1523,7 @@ export function AdminPage(): React.ReactElement {
               </div>
             ))}
           </div>
+          )}
         </CardContent>
       </Card>
 

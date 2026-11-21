@@ -69,7 +69,7 @@ export function LoginPage(): React.ReactElement {
     const res = await signInWithPassword(email, password);
     setSubmitting(false);
     if (!res.error) {
-      navigate('/tableau-de-bord');
+      navigate('/evaluations');
     }
   };
 
@@ -98,12 +98,20 @@ export function LoginPage(): React.ReactElement {
       return;
     }
 
-    navigate('/tableau-de-bord');
+    if (res.activatedProfile?.role === 'CMN_CANDIDATE') {
+      navigate('/tableau-de-bord');
+    } else {
+      navigate('/evaluations');
+    }
   };
 
   const handleDemoLogin = (role: UserRole): void => {
     switchDemoRole(role);
-    navigate('/tableau-de-bord');
+    if (role === 'CMN_CANDIDATE') {
+      navigate('/tableau-de-bord');
+    } else {
+      navigate('/evaluations');
+    }
   };
 
   const displayedError = localError ?? error;

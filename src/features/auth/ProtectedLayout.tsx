@@ -61,18 +61,18 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   {
-    to: '/tableau-de-bord',
-    label: 'Tableau de Bord',
-    shortMobileLabel: 'Tableau',
-    icon: LayoutDashboard,
-    allowedRoles: ['ADMIN_DTF', 'MN_EVALUATOR', 'CMN_CANDIDATE'],
-  },
-  {
     to: '/evaluations',
     label: 'Évaluation Terrain',
     shortMobileLabel: 'Évaluer',
     icon: ClipboardCheck,
     allowedRoles: ['ADMIN_DTF', 'MN_EVALUATOR'],
+  },
+  {
+    to: '/tableau-de-bord',
+    label: 'Tableau de Bord',
+    shortMobileLabel: 'Tableau',
+    icon: LayoutDashboard,
+    allowedRoles: ['ADMIN_DTF', 'MN_EVALUATOR', 'CMN_CANDIDATE'],
   },
   {
     to: '/import-excel',
