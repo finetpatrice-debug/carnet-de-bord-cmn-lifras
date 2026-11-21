@@ -175,9 +175,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
             : 'LIFRAS',
       email: userEmail ?? 'patrice.finet@lifras.be',
       febras_number:
-        typeof userMeta?.febras_number === 'string'
+        typeof userMeta?.febras_number === 'string' && userMeta.febras_number
           ? userMeta.febras_number
-          : DEMO_PROFILES[metaRole].febras_number,
+          : isMainAdmin
+            ? '17244'
+            : DEMO_PROFILES[metaRole].febras_number,
       phone_gsm:
         typeof userMeta?.phone_gsm === 'string'
           ? userMeta.phone_gsm

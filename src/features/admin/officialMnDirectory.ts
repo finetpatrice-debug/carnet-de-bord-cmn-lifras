@@ -6,6 +6,7 @@ interface OfficialMnSeed {
   last_name: string;
   email: string;
   role?: UserRole;
+  febras_number?: string;
 }
 
 const OFFICIAL_MN_SEEDS: OfficialMnSeed[] = [
@@ -46,7 +47,7 @@ const OFFICIAL_MN_SEEDS: OfficialMnSeed[] = [
   { id: 'mn-max-loneux', first_name: 'Max', last_name: 'Loneux', email: 'maxloneux@yahoo.com' },
   { id: 'mn-michel-scius', first_name: 'Michel', last_name: 'Scius', email: 'michel.scius@skynet.be' },
   { id: 'mn-nicolas-nackers', first_name: 'Nicolas', last_name: 'Nackers', email: 'nackersnic@hotmail.com' },
-  { id: 'mn-patrice-finet', first_name: 'Patrice', last_name: 'Finet', email: 'patrice.finet@lifras.be', role: 'ADMIN_DTF' },
+  { id: 'mn-patrice-finet', first_name: 'Patrice', last_name: 'Finet', email: 'patrice.finet@lifras.be', role: 'ADMIN_DTF', febras_number: '17244' },
   { id: 'mn-patrice-leclerc', first_name: 'Patrice', last_name: 'Leclerc', email: 'patrice.leclerc@cybernet.be' },
   { id: 'mn-patrick-demesmaker', first_name: 'Patrick', last_name: 'Demesmaker', email: 'patrick.demesmaker@gmail.com' },
   { id: 'mn-pierre-corbay', first_name: 'Pierre', last_name: 'Corbay', email: 'pcorbay@gmail.com' },
@@ -82,7 +83,7 @@ export const OFFICIAL_MN_DIRECTORY_PROFILES: Profile[] = OFFICIAL_MN_SEEDS.map(
     phone_landline: null,
     phone_gsm: null,
     email: s.email,
-    febras_number: null,
+    febras_number: s.febras_number ?? null,
     cfps_year: null,
     mf_year: null,
     dives_count: null,

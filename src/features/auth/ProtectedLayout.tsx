@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useAuth } from './AuthContext';
-import { useAdminStore } from '@/features/admin/AdminStoreContext';
+import { isCreatorAccount, useAdminStore } from '@/features/admin/AdminStoreContext';
 import {
   flushOutboxEvaluations,
   offlineDb,
@@ -503,8 +503,14 @@ export function ProtectedLayout(): React.ReactElement {
                   {profile.first_name} {profile.last_name}
                 </div>
                 <div className="text-[11px] text-sky-300">
-                  {USER_ROLE_LABELS[profile.role]} • FEBRAS #
-                  {profile.febras_number ?? 'N/A'}
+                  {isCreatorAccount(profile.email, profile.id)
+                    ? 'Concepteur'
+                    : USER_ROLE_LABELS[profile.role]}{' '}
+                  • FEBRAS #
+                  {isCreatorAccount(profile.email, profile.id) &&
+                  (!profile.febras_number || profile.febras_number === '0012345')
+                    ? '17244'
+                    : (profile.febras_number ?? 'N/A')}
                 </div>
               </div>
             </div>
