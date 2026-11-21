@@ -271,9 +271,13 @@ export function EvaluationPage(): React.ReactElement {
   const allQuestionsAnswered =
     totalQuestionsCount > 0 && answeredQuestionsCount === totalQuestionsCount;
 
+  const MIN_COMMENT_CHARS = 10;
+  const strengthsLen = strengthsComment.trim().length;
+  const improvementsLen = improvementsComment.trim().length;
+
   const commentsValid =
-    strengthsComment.trim().length >= 3 &&
-    improvementsComment.trim().length >= 3;
+    strengthsLen >= MIN_COMMENT_CHARS &&
+    improvementsLen >= MIN_COMMENT_CHARS;
 
   const canSubmit =
     Boolean(selectedCandidateId) &&
@@ -941,12 +945,26 @@ export function EvaluationPage(): React.ReactElement {
               <textarea
                 id="strengths-textarea"
                 rows={3}
-                placeholder="Points forts observés durant la prestation (ex: briefing structuré, écoute attentive, sécurité irréprochable)..."
+                minLength={MIN_COMMENT_CHARS}
+                placeholder="Minimum 10 caractères obligatoires — Points forts observés durant la prestation (ex: briefing structuré, écoute attentive, sécurité irréprochable)..."
                 value={strengthsComment}
                 onChange={(e) => setStrengthsComment(e.target.value)}
                 required
                 className="w-full rounded-xl border border-slate-300 bg-white p-3 text-sm text-slate-900 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
               />
+              <div className="flex items-center justify-between text-[11px]">
+                <span
+                  className={
+                    strengthsLen >= MIN_COMMENT_CHARS
+                      ? 'font-semibold text-emerald-700'
+                      : 'font-medium text-amber-700'
+                  }
+                >
+                  {strengthsLen >= MIN_COMMENT_CHARS
+                    ? `✓ Validé (${strengthsLen} caractères)`
+                    : `${strengthsLen} / ${MIN_COMMENT_CHARS} caractères minimum obligatoires`}
+                </span>
+              </div>
               {strengthsDictation.speechError && (
                 <p className="text-xs text-amber-700">
                   {strengthsDictation.speechError}
@@ -988,12 +1006,26 @@ export function EvaluationPage(): React.ReactElement {
               <textarea
                 id="improvements-textarea"
                 rows={3}
-                placeholder="Pistes concrètes d’amélioration pour le candidat..."
+                minLength={MIN_COMMENT_CHARS}
+                placeholder="Minimum 10 caractères obligatoires — Pistes concrètes d’amélioration pour le candidat..."
                 value={improvementsComment}
                 onChange={(e) => setImprovementsComment(e.target.value)}
                 required
                 className="w-full rounded-xl border border-slate-300 bg-white p-3 text-sm text-slate-900 shadow-sm focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500"
               />
+              <div className="flex items-center justify-between text-[11px]">
+                <span
+                  className={
+                    improvementsLen >= MIN_COMMENT_CHARS
+                      ? 'font-semibold text-emerald-700'
+                      : 'font-medium text-amber-700'
+                  }
+                >
+                  {improvementsLen >= MIN_COMMENT_CHARS
+                    ? `✓ Validé (${improvementsLen} caractères)`
+                    : `${improvementsLen} / ${MIN_COMMENT_CHARS} caractères minimum obligatoires`}
+                </span>
+              </div>
               {improvementsDictation.speechError && (
                 <p className="text-xs text-amber-700">
                   {improvementsDictation.speechError}
@@ -1021,7 +1053,8 @@ export function EvaluationPage(): React.ReactElement {
                 <div className="flex items-center gap-2 text-amber-300 font-medium">
                   <AlertCircle className="h-4 w-4 shrink-0" />
                   <span>
-                    Veuillez renseigner les deux commentaires constructifs (points à
+                    Veuillez renseigner au moins <strong>{MIN_COMMENT_CHARS} caractères</strong>{' '}
+                    dans chacune des deux cases de commentaires constructifs (points à
                     garder et points à améliorer).
                   </span>
                 </div>
