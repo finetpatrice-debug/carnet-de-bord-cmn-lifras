@@ -54,6 +54,7 @@ import {
 } from '@/components/ui/card';
 import {
   AlertTriangle,
+  ArrowLeft,
   Award,
   BookOpen,
   CheckCircle2,
@@ -181,9 +182,22 @@ export function DashboardPage(): React.ReactElement {
   const { candidates, mnDirectory, evaluations, evaluationScores } =
     useAdminStore();
 
-  const [selectedCandidateId, setSelectedCandidateId] = useState<string>(
-    () => candidates[0]?.id ?? 'cand-thomas-peeters'
+  const isCandidateSelf = profile?.role === 'CMN_CANDIDATE';
+
+  const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(
+    () => {
+      if (isCandidateSelf) {
+        const own = candidates.find(
+          (c) =>
+            c.email.toLowerCase() === (profile?.email ?? '').toLowerCase() ||
+            c.id === profile?.id
+        );
+        return own?.id ?? candidates[0]?.id ?? null;
+      }
+      return null;
+    }
   );
+  const [candidatePanelSearch, setCandidatePanelSearch] = useState<string>('');
   const [activeTab, setActiveTab] = useState<DashboardTab>(
     'OVERVIEW_AND_PILLARS'
   );
@@ -345,6 +359,126 @@ export function DashboardPage(): React.ReactElement {
     });
   };
 
+  if (candidates.length === 0) {
+    return <div className="p-6">Aucun candidat disponible.</div>;
+  }
+
+  // Première page du Tableau de Bord (Administrateur & MN Évaluateur) :
+  // Panel compact de tous les candidats CMN avant d'entrer dans le Cockpit chiffré
+  const showCandidatesPanel =
+    !isCandidateSelf &&
+    selectedCandidateId === null &&
+    activeTab !== 'SUPERVISOR_COHORT';
+
+  if (showCandidatesPanel) {
+    const query = candidatePanelSearch.trim().toLowerCase();
+    const filteredCandidates = candidates
+      .filter((c) => {
+        if (!query) return true;
+        const full = `${c.first_name} ${c.last_name} ${c.club_name ?? ''} ${c.febras_number ?? ''}`.toLowerCase();
+        return full.includes(query);
+      })
+      .sort((a, b) =>
+        `${a.last_name} ${a.first_name}`.localeCompare(
+          `${b.last_name} ${b.first_name}`,
+          'fr'
+        )
+      );
+
+    return (
+      <div className="space-y-4">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+            <div className="flex flex-wrap items-center gap-2">
+              <Users className="h-5 w-5 text-sky-700" />
+              <h1 className="text-lg font-extrabold text-slate-900">
+                Candidats CMN — Promotion en cours
+              </h1>
+              <Badge className="bg-sky-600 text-white text-xs">
+                {candidates.length} candidat{candidates.length > 1 ? 's' : ''}
+              </Badge>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative w-full sm:w-56">
+                <Search className="pointer-events-none absolute left-2.5 top-2.5 h-3.5 w-3.5 text-slate-400" />
+                <Input
+                  type="text"
+                  placeholder="Filtrer un candidat..."
+                  value={candidatePanelSearch}
+                  onChange={(e) => setCandidatePanelSearch(e.target.value)}
+                  className="h-8 pl-8 text-xs"
+                />
+              </div>
+              {profile?.role === 'ADMIN_DTF' && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setSelectedCandidateId(candidates[0]?.id ?? null);
+                    setActiveTab('SUPERVISOR_COHORT');
+                  }}
+                  className="h-8 border-amber-300 bg-amber-50 text-xs font-bold text-amber-900 hover:bg-amber-100"
+                >
+                  <Users className="h-3.5 w-3.5" />
+                  Comparatif Promotion
+                </Button>
+              )}
+            </div>
+          </div>
+          <p className="mt-1 text-xs text-slate-500">
+            Sélectionnez un candidat pour ouvrir son Cockpit 5 Piliers, son Radar et le détail de ses évaluations.
+          </p>
+        </div>
+
+        {/* Grille compacte permettant d'afficher facilement 10 à 15+ candidats simultanément */}
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          {filteredCandidates.map((cand) => {
+            const evalCount = evaluations.filter(
+              (ev) => ev.candidate_id === cand.id
+            ).length;
+            const candInitials = `${cand.first_name.charAt(0)}${cand.last_name.charAt(0)}`.toUpperCase();
+            return (
+              <button
+                key={cand.id}
+                type="button"
+                onClick={() => {
+                  setSelectedCandidateId(cand.id);
+                  setActiveTab('OVERVIEW_AND_PILLARS');
+                }}
+                className="group flex min-w-0 items-center gap-2.5 rounded-xl border border-slate-200 bg-white p-2.5 text-left shadow-sm transition hover:border-sky-500 hover:bg-sky-50/40 hover:shadow-md"
+              >
+                {cand.photo_storage_path ? (
+                  <img
+                    src={cand.photo_storage_path}
+                    alt={`${cand.first_name} ${cand.last_name}`}
+                    className="h-10 w-10 shrink-0 rounded-full border-2 border-sky-400 object-cover"
+                  />
+                ) : (
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sky-600 to-slate-800 text-xs font-extrabold text-white">
+                    {candInitials}
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-xs font-bold text-slate-900 group-hover:text-sky-800">
+                    {cand.first_name} {cand.last_name}
+                  </div>
+                  <div className="truncate text-[10px] text-slate-500">
+                    {cand.club_name ?? 'LIFRAS'}
+                    {cand.febras_number ? ` • #${cand.febras_number}` : ''}
+                  </div>
+                  <div className="mt-0.5 inline-flex items-center rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700">
+                    {evalCount} éval.
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
   if (!activeCandidate) {
     return <div className="p-6">Aucun candidat disponible.</div>;
   }
@@ -415,20 +549,21 @@ export function DashboardPage(): React.ReactElement {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            {profile?.role !== 'CMN_CANDIDATE' && (
-              <select
-                aria-label="Sélectionner le candidat CMN"
-                value={selectedCandidateId}
-                onChange={(e) => setSelectedCandidateId(e.target.value)}
-                className="h-9 rounded-lg border border-slate-300 bg-slate-50 px-3 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-sky-500"
+          <div className="flex flex-wrap items-center gap-2.5">
+            {!isCandidateSelf && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSelectedCandidateId(null);
+                  setActiveTab('OVERVIEW_AND_PILLARS');
+                }}
+                className="h-9 border-sky-300 bg-sky-50 text-xs font-bold text-sky-900 hover:bg-sky-100"
               >
-                {candidates.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    Candidat : {c.first_name} {c.last_name} ({c.club_name})
-                  </option>
-                ))}
-              </select>
+                <ArrowLeft className="h-4 w-4" />
+                Tous les candidats
+              </Button>
             )}
 
             <select
