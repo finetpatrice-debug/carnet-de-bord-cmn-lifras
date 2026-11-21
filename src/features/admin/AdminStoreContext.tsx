@@ -18,6 +18,7 @@ import {
   VALERIE_GASPAR_EVALUATIONS,
   VALERIE_GASPAR_SCORES,
 } from './valerieGasparDataset';
+import { OFFICIAL_MN_DIRECTORY_PROFILES } from './officialMnDirectory';
 
 interface AdminStoreContextValue {
   mnDirectory: Profile[];
@@ -242,6 +243,7 @@ const INITIAL_MN_DIRECTORY: Profile[] = [
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
   },
+  ...OFFICIAL_MN_DIRECTORY_PROFILES,
 ];
 
 const INITIAL_CANDIDATES: Profile[] = [
